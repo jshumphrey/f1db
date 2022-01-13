@@ -1,3 +1,41 @@
+/*This identifies all overtakes that take place during a race, and attempts to
+classify those overtakes by how they occurred: the overtake occurred on track,
+the overtake occurred because the overtaken driver made a pit stop, or the overtaken
+driver retired from the race.
+
+Keep in mind that the only data we have to detect and classify overtakes are: the position
+of each driver _at the end of each lap_, the lap number and duration of any pit stops
+a driver made, and the lap number on which a driver retired, if applicable. This means that
+there are some very significant "blind spots" in terms of ability to detect overtakes.
+Most notably, we have zero visibility to any situations where drivers overtake one another
+back and forth within a single lap, because we can only look at the drivers' postions once per lap.
+
+As a result, the query identifies overtakes as "situations where driver X is behind driver Y
+this lap, but driver X was NOT behind driver Y last lap." Once those situations have been
+identified (from cars_behind_this_lap and cars_behind_last_lap), the query attempts to categorize
+them, according to the following logic:
+
+1. If the overtaken driver retired on the lap on which he was overtaken,
+   the overtake was due to a retirement.
+
+2. If the overtaken driver pitted during the lap on which he was overtaken,
+   the overtake was due to a pit stop, and the overtake occurred as the
+   overtaken driver was entering the pit lane.
+
+3. If the overtaken driver pitted during the lap prior to which he was overtaken,
+   AND the gap (the "delta") between the overtaking driver and the overtaken driver
+   was less than the duration of the overtaken driver's pit stop, the overtake
+   was due to a pit stop, and the overtake occurred as the overtaken driver
+   was exiting the pit lane.
+
+4. If the overtake occurred on lap 1, and the drivers were within two grid positions
+   one another, then the overtake occurred during the start of the race.
+   (This is a pretty disgusting kludge, but it tends to work okay in practice.)
+
+5. If none of the above situations apply, the overtake occurred on track.
+
+*/
+
 DROP TABLE IF EXISTS overtakes;
 CREATE TABLE overtakes AS
 SELECT DISTINCT
@@ -35,7 +73,7 @@ FROM lap_positions
     AND previous_lap.driver_id = lap_positions.driver_id
     AND previous_lap.lap = lap_positions.lap - 1
 
-  INNER JOIN lap_positions AS cars_behind_this_lap /*Cross join to ALL cars behind on this lap*/
+  INNER JOIN lap_positions AS cars_behind_this_lap /*Join to ALL cars behind on this lap*/
     ON cars_behind_this_lap.race_id = lap_positions.race_id
     AND cars_behind_this_lap.lap = lap_positions.lap
     AND cars_behind_this_lap.position > lap_positions.position
