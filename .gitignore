@@ -1,0 +1,13 @@
+# Exclude system files
+/.vscode
+/__pycache__
+/.pylintrc
+
+# Exclude the database file.
+/f1.db
+
+# Exclude the csv files within /raw_data_files .
+/raw_data_files
+
+# Exclude any .csv files exported at the top level.
+/*.csv
