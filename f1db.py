@@ -28,6 +28,20 @@ ERGAST_ZIP_FILE_NAME = "f1db.zip"
 
 CONSOLE_OUTPUT_ROW_LIMIT = 20 # Defines the maximum number of rows dumped out to the console
 
+class Query:
+
+    def __init__(self, connection, name, table_name, sql_script_file_name):
+        self.connection = connection
+        self.name = name
+        self.table_name = table_name
+        self.sql_script_file_name = sql_script_file_name
+        self.visualizations = []
+
+    def execute(self):
+        execute_sql_script_file(self.connection, self.sql_script_file_name)
+
+
+
 def get_arguments():
     '''This handles the parsing of various arguments to the script.'''
     parser = argparse.ArgumentParser(description = "Connect to the F1 SQLite database (or reload it from the CSV files) and run queries against it.")
@@ -167,6 +181,8 @@ def export_table_to_csv(connection, table_name, output_file_name = None):
 xptt = export_table_to_csv
 essf = execute_sql_script_file
 psr = print_select_results
+
+def display_and_process_menu(
 
 def main():
     '''Execute top-level functionality.'''
