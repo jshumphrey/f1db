@@ -12,6 +12,7 @@ and exposing the appropriate interfaces for the sqlite3 Connection to make use o
 This file, then, is an all-in-one-place list of all of these function definitions for the F1DB project.
 
 To add UDFs to this file, simply add the requisite class/function definitions to the file below.
+See https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.create_function for more details.
 
 Your class/function name MUST be named the same as the callable name of the SQL function you want
 to define, and its Python function name MUST begin with "udf_"!
