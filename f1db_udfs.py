@@ -2,9 +2,14 @@
 '''This file contains definitions for all UDFs (User-Defined Functions) that
 will be compiled and made available for use each time a connection is instantiated.
 
-Per the sqlite3 documentation, UDFs are defined by passing a Python udf_object (a class or function)
+Per the sqlite3 documentation, UDFs are defined by passing a Python "udf object" (a class or function)
 as an argument to a method of a sqlite3 Connection. Scalar functions require a Python function,
 and aggregation functions require a Python class with __init__, step, and finalize class methods.
+The sqlite3 library will then call the provided "udf object" to implement its functionality.
+
+In other words, the user is responsible for developing the logic to get the function to work,
+and exposing the appropriate interfaces for the sqlite3 Connection to make use of it.
+This file, then, is an all-in-one-place list of all of these function definitions for the F1DB project.
 
 To add UDFs to this file, simply add the requisite class/function definitions to the file below.
 
