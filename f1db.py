@@ -24,13 +24,29 @@ class Query:
     def execute(self):
         self.connection.execute_sql_script_file(self.sql_script_file_name)
 
+    def generate_results(self):
+        cursor = self.connection.execute("SELECT * FROM " + self.output_table_name)
+        return [(x[0] for x in cursor.description)] + cursor.fetchall()
+
 class QueryVisualization:
 
-    def __init__(self, name, query):
-        self.name = name
+    def __init__(self, query, title, figure_type, x_col_name, y_col_name, color_col_name, value_color_dict = None):
         self.query = query
+        self.title = title
+        self.figure_type = figure_type
+        self.x_col_name = x_col_name
+        self.y_col_name = y_col_name
+        self.color_col_name = color_col_name
+        self.value_color_dict = value_color_dict
 
-        # self.figure = pass
+        self.figure = config.PLOTLY_FIGURE_DICT[self.figure_type](
+            self.query.generate_results,
+            x = self.x_col_name,
+            y = self.y_col_name,
+        )
+
+    def display(self):
+        self.figure.show()
 
 
 class Connection:

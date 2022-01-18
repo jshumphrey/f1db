@@ -1,6 +1,6 @@
 #! /usr/bin/env/python3
 '''This file contains a variety of configuration parameters and hardcoded global constants.'''
-import plotly.express
+import plotly.io, plotly.express
 
 DATABASE_FILE_NAME = "f1.db"
 
@@ -19,6 +19,8 @@ RELOAD_SCRIPT_FILES = [ # List of SQL script files that get run when the DB is r
 
 CONSOLE_OUTPUT_ROW_LIMIT = 20 # Defines the maximum number of rows dumped out to the console
 
+plotly.io.renderers.default = "png" # Sets all Plotly exports to display as PNG files
+
 PLOTLY_FIGURE_DICT = {
-	"Bar": plotly.express.bar
+	"Bar": plotly.express.histogram
 }
