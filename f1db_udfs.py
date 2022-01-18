@@ -62,7 +62,7 @@ class udf_stdev_pop: # pylint: disable = missing-function-docstring
         return statistics.pstdev(self.values)
 
 USER_DEFINED_FUNCTIONS = [{
-    "udf_name": object_name.replace("udf_", "").upper(),
+    "udf_name": object_name.replace("udf_", "").upper(), # Converts "udf_myfunc" to "MYFUNC"
     "udf_type": "Aggregation" if inspect.isclass(udf_object) else "Scalar",
     "num_arguments": 1 if inspect.isclass(udf_object) else len(inspect.signature(udf_object).parameters),
     "udf_object": udf_object
