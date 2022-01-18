@@ -5,6 +5,7 @@ See http://ergast.com/mrd/ for more details about the API and the table structur
 
 import argparse, csv, logging, os, re, requests, sqlite3, zipfile
 import pdb # pylint: disable = unused-import
+import f1db_config as config # This file provides a lot of config parameters and global constants
 import f1db_udfs # This file defines all user-defined functions to compile at connection setup
 
 # Configure the logger so that we have a logger object to use.
@@ -56,7 +57,7 @@ class Connection:
     and teardown of connections. UDFs are compiled as part of the connection creation,
     and the connection can now be used via with/as instead of needing to close it manually.'''
     def __init__(self):
-        self.connection = sqlite3.connect(DATABASE_FILE_NAME)
+        self.connection = sqlite3.connect(config.DATABASE_FILE_NAME)
         self.connection.row_factory = sqlite3.Row
         self.compile_udfs()
 
@@ -84,14 +85,14 @@ class Connection:
     def execute_sql_script_file(self, file_name):
         '''This executes one or more SQL script files via the provided connection.
         The file_names argument can be a single file name or a list of file names.'''
-        with open(os.path.join(SQL_SCRIPT_FILES_DIR, file_name), "r") as sql_script:
+        with open(os.path.join(config.SQL_SCRIPT_FILES_DIR, file_name), "r") as sql_script:
             self.connection.executescript(sql_script.read())
 
     def print_select_results(self, select_statement):
         '''This executes a SELECT statement as text and dumps out its output to the console.'''
         cursor = self.connection.execute(select_statement)
         print([x[0] for x in cursor.description])
-        for row in cursor.fetchall()[:CONSOLE_OUTPUT_ROW_LIMIT]:
+        for row in cursor.fetchall()[:config.CONSOLE_OUTPUT_ROW_LIMIT]:
             print(list(row))
 
     def export_table_to_csv(self, table_name, output_file_name = None):
@@ -135,27 +136,27 @@ def handle_arguments(arguments):
 def redownload_files():
     '''This handles the process of redownloading the CSV files from the Ergast website.'''
     # Clear out all of the existing CSV files.
-    logger.debug("Clearing out " + CSV_FILES_DIR + "...")
-    for file_name in os.listdir(CSV_FILES_DIR):
+    logger.debug("Clearing out " + config.CSV_FILES_DIR + "...")
+    for file_name in os.listdir(config.CSV_FILES_DIR):
         if file_name.endswith(".csv"):
-            os.remove(os.path.join(CSV_FILES_DIR, file_name))
+            os.remove(os.path.join(config.CSV_FILES_DIR, file_name))
     logger.debug("Files removed.")
 
     logger.info("Downloading CSV zip file from Ergast...")
-    with open(os.path.join(CSV_FILES_DIR, ERGAST_ZIP_FILE_NAME), "wb") as downfile:
-        for data in requests.get(ERGAST_DOWNLOAD_URL, stream = True).iter_content():
+    with open(os.path.join(config.CSV_FILES_DIR, config.ERGAST_ZIP_FILE_NAME), "wb") as downfile:
+        for data in requests.get(config.ERGAST_DOWNLOAD_URL, stream = True).iter_content():
             downfile.write(data)
     logger.info("Download complete.")
 
     # Extract the zip file we downloaded to the CSV file directory.
     logger.info("Extracting CSV files...")
-    with zipfile.ZipFile(os.path.join(CSV_FILES_DIR, ERGAST_ZIP_FILE_NAME), "r") as csv_zip:
-        csv_zip.extractall(CSV_FILES_DIR)
+    with zipfile.ZipFile(os.path.join(config.CSV_FILES_DIR, config.ERGAST_ZIP_FILE_NAME), "r") as csv_zip:
+        csv_zip.extractall(config.CSV_FILES_DIR)
     logger.info("Extraction complete.")
 
     # Remove the downloaded zip file.
     logger.debug("Removing the downloaded zip file...")
-    os.remove(os.path.join(CSV_FILES_DIR, ERGAST_ZIP_FILE_NAME))
+    os.remove(os.path.join(config.CSV_FILES_DIR, config.ERGAST_ZIP_FILE_NAME))
     logger.debug("Zip file removed.")
 
 def reload_database():
@@ -173,8 +174,8 @@ def reload_database():
         '''This function populates the base tables of the database from the CSV files
         downloaded from the Ergast API website. This must not be run until after the
         base tables have been defined, via TABLE_DEFINITION_SCRIPT_FILE.'''
-        for file_name in os.listdir(CSV_FILES_DIR):
-            with open(os.path.join(CSV_FILES_DIR, file_name), "r") as infile:
+        for file_name in os.listdir(config.CSV_FILES_DIR):
+            with open(os.path.join(config.CSV_FILES_DIR, file_name), "r") as infile:
                 reader = csv.DictReader(infile)
                 records = [[record[field_name] for field_name in reader.fieldnames] for record in reader]
 
@@ -186,17 +187,17 @@ def reload_database():
             connection.connection.executemany(insert_statement, records)
             connection.connection.commit()
 
-    os.remove(DATABASE_FILE_NAME) # Delete the SQLite database entirely
+    os.remove(config.DATABASE_FILE_NAME) # Delete the SQLite database entirely
     with Connection() as connection:
         logger.debug("Defining base tables...")
-        connection.execute_sql_script_file(TABLE_DEFINITION_SCRIPT_FILE)
+        connection.execute_sql_script_file(config.TABLE_DEFINITION_SCRIPT_FILE)
         logger.debug("Base tables defined.")
 
         logger.info("Populating base tables...")
         populate_base_tables(connection)
         logger.info("Base tables populated.")
 
-        for script_file in RELOAD_SCRIPT_FILES:
+        for script_file in config.RELOAD_SCRIPT_FILES:
             logger.info("Running " + script_file + "...")
             connection.execute_sql_script_file(script_file)
             logger.info(script_file + " run successfully.")
