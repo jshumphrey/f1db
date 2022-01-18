@@ -30,11 +30,25 @@ CONSOLE_OUTPUT_ROW_LIMIT = 20 # Defines the maximum number of rows dumped out to
 
 class Query:
 
-    def __init__(self, name, table_name, sql_script_file_name):
+    def __init__(self, name, connection, output_table_name, sql_script_file_name):
         self.name = name
-        self.table_name = table_name
+        self.connection = connection
+        self.output_table_name = output_table_name
         self.sql_script_file_name = sql_script_file_name
         self.visualizations = []
+
+    def execute(self):
+        self.connection.execute_sql_script_file(self.sql_script_file_name)
+
+class QueryVisualization:
+
+    def __init__(self, name, query):
+        self.name = name
+        self.query = query
+
+        # self.figure = pass
+
+
 
 
 class Connection:
