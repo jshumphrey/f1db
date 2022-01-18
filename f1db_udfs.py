@@ -2,11 +2,17 @@
 '''This file contains definitions for all UDFs (User-Defined Functions) that
 will be compiled and made available for use each time a connection is instantiated.
 
-Per the sqlite3 documentation, UDFs are defined by passing a Python udf_object (a class or function)
+Per the sqlite3 documentation, UDFs are defined by passing a Python "udf object" (a class or function)
 as an argument to a method of a sqlite3 Connection. Scalar functions require a Python function,
 and aggregation functions require a Python class with __init__, step, and finalize class methods.
+The sqlite3 library will then call the provided "udf object" to implement its functionality.
+
+In other words, the user is responsible for developing the logic to get the function to work,
+and exposing the appropriate interfaces for the sqlite3 Connection to make use of it.
+This file, then, is an all-in-one-place list of all of these function definitions for the F1DB project.
 
 To add UDFs to this file, simply add the requisite class/function definitions to the file below.
+See https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.create_function for more details.
 
 Your class/function name MUST be named the same as the callable name of the SQL function you want
 to define, and its Python function name MUST begin with "udf_"!
@@ -57,7 +63,7 @@ class udf_stdev_pop: # pylint: disable = missing-function-docstring
         return statistics.pstdev(self.values)
 
 USER_DEFINED_FUNCTIONS = [{
-    "udf_name": object_name.replace("udf_", "").upper(),
+    "udf_name": object_name.replace("udf_", "").upper(), # Converts "udf_myfunc" to "MYFUNC"
     "udf_type": "Aggregation" if inspect.isclass(udf_object) else "Scalar",
     "num_arguments": 1 if inspect.isclass(udf_object) else len(inspect.signature(udf_object).parameters),
     "udf_object": udf_object
