@@ -16,6 +16,7 @@ class Connection:
     '''This class wraps the sqlite3 Connection object to streamline the setup
     and teardown of connections. UDFs are compiled as part of the connection creation,
     and the connection can now be used via with/as instead of needing to close it manually.'''
+
     def __init__(self):
         self.connection = sqlite3.connect(config.DATABASE_FILE_NAME)
         self.connection.row_factory = sqlite3.Row
@@ -294,7 +295,7 @@ def main():
     with Connection() as conn:
         conn.execute_sql_script_file("display_tables.sql")
         conn.bind_queries(config.QUERY_YAML_FILE_NAME)
-        conn.queries[0].visualizations[0].export_png()
+        # conn.queries[0].visualizations[0].export_png()
         pdb.set_trace()
         pass # pylint: disable = unnecessary-pass
 
