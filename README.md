@@ -34,6 +34,6 @@ See http://ergast.com/mrd/ for more details about the API and the table structur
 
 ## Database table structure
 
-The author of the Ergast API provided two documents on the database table structure, which I've included here for reference. See [Data Dictionary.txt](Data Dictionary.txt) and [Data Model.png](Data Model.png).
+The author of the Ergast API provided two documents on the database table structure, which I've included here for reference. See [data_dictionary.txt](data_dictionary.txt) and [data_model.png](data_model.png).
 
 **In addition to this**, there are a number of custom or extended tables that have been defined via the supplemental SQL files. Look at `RELOAD_SCRIPT_FILES` in [f1db_config.py](f1db_config.py) to see what else is defined.
