@@ -19,8 +19,10 @@ RELOAD_SCRIPT_FILES = [ # List of SQL script files that get run when the DB is r
 
 CONSOLE_OUTPUT_ROW_LIMIT = 20 # Defines the maximum number of rows dumped out to the console
 
-plotly.io.renderers.default = "png" # Sets all Plotly exports to display as PNG files
-
-PLOTLY_FIGURE_DICT = {
-	"Bar": plotly.express.histogram
+PLOTLY_FIGURE_TYPE_DICT = { # This translates a figure-type string into the actual Plotly constructor function.
+	"Line": plotly.express.line,
+	"Bar": plotly.express.bar,
+	"Histogram": plotly.express.histogram,
+	"Scatter": plotly.express.scatter,
+	"Box": plotly.express.box
 }

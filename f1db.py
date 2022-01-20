@@ -12,43 +12,6 @@ import f1db_udfs # This file defines all user-defined functions to compile at co
 logging.basicConfig(level = logging.NOTSET)
 logger = logging.getLogger("f1db")
 
-class Query:
-
-    def __init__(self, name, connection, output_table_name, sql_script_file_name):
-        self.name = name
-        self.connection = connection
-        self.output_table_name = output_table_name
-        self.sql_script_file_name = sql_script_file_name
-        self.visualizations = []
-
-    def execute(self):
-        self.connection.execute_sql_script_file(self.sql_script_file_name)
-
-    def generate_results(self):
-        cursor = self.connection.execute("SELECT * FROM " + self.output_table_name)
-        return [(x[0] for x in cursor.description)] + cursor.fetchall()
-
-class QueryVisualization:
-
-    def __init__(self, query, title, figure_type, x_col_name, y_col_name, color_col_name, value_color_dict = None):
-        self.query = query
-        self.title = title
-        self.figure_type = figure_type
-        self.x_col_name = x_col_name
-        self.y_col_name = y_col_name
-        self.color_col_name = color_col_name
-        self.value_color_dict = value_color_dict
-
-        self.figure = config.PLOTLY_FIGURE_DICT[self.figure_type](
-            self.query.generate_results,
-            x = self.x_col_name,
-            y = self.y_col_name,
-        )
-
-    def display(self):
-        self.figure.show()
-
-
 class Connection:
     '''This class wraps the sqlite3 Connection object to streamline the setup
     and teardown of connections. UDFs are compiled as part of the connection creation,
@@ -57,6 +20,11 @@ class Connection:
         self.connection = sqlite3.connect(config.DATABASE_FILE_NAME)
         self.connection.row_factory = sqlite3.Row
         self.compile_udfs()
+
+        # "Aliasing" some functions of the underlying sqlite3.Connection object
+        # so that they're callable directly without having to unwrap it.
+        self.execute = self.connection.execute
+        self.executemany = self.connection.executemany
 
     def __enter__(self):
         return self
@@ -80,13 +48,12 @@ class Connection:
         logger.debug("UDF compilation complete.")
 
     def execute_sql_script_file(self, file_name):
-        '''This executes one or more SQL script files via the provided connection.
-        The file_names argument can be a single file name or a list of file names.'''
+        '''This opens and executes a SQL script file via the database connection.'''
         with open(os.path.join(config.SQL_SCRIPT_FILES_DIR, file_name), "r") as sql_script:
             self.connection.executescript(sql_script.read())
 
     def print_select_results(self, select_statement):
-        '''This executes a SELECT statement as text and dumps out its output to the console.'''
+        '''This executes the provided SELECT statement and dumps out its output to the console.'''
         cursor = self.connection.execute(select_statement)
         print([x[0] for x in cursor.description])
         for row in cursor.fetchall()[:config.CONSOLE_OUTPUT_ROW_LIMIT]:
@@ -95,13 +62,88 @@ class Connection:
     def export_table_to_csv(self, table_name, output_file_name = None):
         '''This exports all records of a given table in the database to a CSV file.
         By default, the file name is the table's name plus ".csv", but a custom
-        output file name can be provided, if so desired.'''
+        output file name can be provided.'''
         cursor = self.connection.execute("SELECT * FROM " + table_name)
         file_name = output_file_name if output_file_name else table_name + ".csv"
         with open(file_name, "w") as outfile:
             writer = csv.writer(outfile)
             writer.writerow([x[0] for x in cursor.description])
             writer.writerows([list(row) for row in cursor.fetchall()])
+
+class Query:
+    '''A Query represents
+
+    A Query's data might be able to be visualized in more than one way, so a Query has a list
+    of QueryVisualizations, which interact with the Plotly module to draw various kinds of charts.
+
+    Queries, and their Visualizations ("QVizes"), are designed to be AS LAZY AS POSSIBLE!!
+    - Queries are NOT run at compile time; we wait until they're actually requested.
+    - The results of a query are NOT stored in memory; instead, we generate a new cursor when requested.
+    - QVizes do not compile into a Figure object when they are loaded
+
+    We do all of these things because the program is interactive, and might stay open for a long time.
+    We want to make sure that the program does not hold onto any memory for any longer than it needs to,
+    so Queries and QVizes prefer to recalculate things as needed (which in practice is relatively rare),
+    and cache as little information as possible in the meantime.''' # Todo - finish this docstring
+
+    def __init__(self, name, connection, output_table_name, sql_script_file_name):
+        self.name = name
+        self.connection = connection
+        self.output_table_name = output_table_name
+        self.sql_script_file_name = sql_script_file_name
+        self.visualizations = []
+
+        # Every time the program starts up, mark all queries as "not calculated yet."
+        # The first time each query is executed, this flips to True and stays that
+        # way until the program is closed. This lets us execute the query only once.
+        self.has_been_calculated = False
+
+    def calculate_results_table(self):
+        '''This executes the SQL script responsible for calculating the query's output table.
+        The table may already have existed in the database, but we don't know if it's up to date,
+        so we run its code again to be sure. After we run its code for the first time, we assume
+        that it's up to date for the rest of the lifetime of this program run,
+        so we flip its flag to True and don't run it again until the program is restarted.'''
+        self.connection.execute_sql_script_file(self.sql_script_file_name)
+        self.has_been_calculated = True
+
+    def get_results_records(self):
+        '''This returns all of the records in the Query's output table.
+        The output table is calculated first, if the Query hasn't been calculated yet.'''
+        if not self.has_been_calculated:
+            self.calculate_results_table()
+        cursor = self.connection.execute("SELECT * FROM " + self.output_table_name)
+        return [(x[0] for x in cursor.description)] + cursor.fetchall()
+
+class QueryVisualization:
+    '''A QueryVisualization''' # Todo - finish this docstring
+
+    def __init__(self, query, figure_yaml):
+        '''All that we store about a QVis when it gets created is the raw dictionary
+        from the YAML structure. We do NOT compile that into a Figure yet! That happens
+        later, on demand, when generate_figure is called. See QViz.generate_figure() for why.'''
+        self.query = query
+        self.figure_yaml = figure_yaml
+        self.title = figure_yaml["title"]
+
+    def generate_figure(self):
+        '''This RETURNS a Figure - it does NOT set a class attribute!!
+
+        Because we want this to be as lazy as possible, we rebuild the Figure FROM SCRATCH, each time we want it.
+        This is tolerable because if we didn't do that, then the query results data would get stored in memory,
+        because you can't compile a Figure without providing its data.
+
+        To get around this, we don't generate the data, or the Figure, until we actually need it.
+        This allows the Figure (and the data) to be garbage-collected as soon as we're done with the Figure.'''
+
+        constructor = config.PLOTLY_FIGURE_TYPE_DICT[self.figure_yaml["figure_type"]]
+        figure = constructor(
+            self.query.get_results_records()
+        )
+
+    def export_png(self):
+        '''This exports the QViz as a .png image.'''
+        self.generate_figure().write_image(self.title.replace(" ", "_").lower() + ".png")
 
 def get_arguments():
     '''This handles the parsing of various arguments to the script.'''
@@ -170,7 +212,7 @@ def reload_database():
     def populate_base_tables(connection):
         '''This function populates the base tables of the database from the CSV files
         downloaded from the Ergast API website. This must not be run until after the
-        base tables have been defined, via TABLE_DEFINITION_SCRIPT_FILE.'''
+        base tables have been defined, via the TABLE_DEFINITION_SCRIPT_FILE.'''
         for file_name in os.listdir(config.CSV_FILES_DIR):
             with open(os.path.join(config.CSV_FILES_DIR, file_name), "r") as infile:
                 reader = csv.DictReader(infile)
