@@ -11,3 +11,6 @@
 
 # Exclude any .csv files exported at the top level.
 /*.csv
+
+# Exclude any .png files exported at the top level.
+/*.png

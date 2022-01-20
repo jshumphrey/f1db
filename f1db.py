@@ -3,7 +3,7 @@
 a SQLite database of Formula 1 race data, which is provided by the Ergast API.
 See http://ergast.com/mrd/ for more details about the API and the table structure.'''
 
-import argparse, csv, logging, os, re, requests, sqlite3, yaml, zipfile
+import argparse, csv, logging, os, pandas, re, requests, sqlite3, yaml, zipfile
 import pdb # pylint: disable = unused-import
 import f1db_config as config # This file provides a lot of config parameters and global constants
 import f1db_udfs # This file defines all user-defined functions to compile at connection setup
@@ -136,6 +136,13 @@ class Query:
         cursor = self.connection.execute("SELECT * FROM " + self.output_table_name)
         return [(x[0] for x in cursor.description)] + cursor.fetchall()
 
+    def generate_results_dataframe(self):
+        '''This returns a Pandas dataframe containing the records in the Query's output table.
+        The output table is calculated first, if the Query hasn't been calculated yet.'''
+        if not self.has_been_calculated:
+            self.calculate_results_table()
+        return pandas.read_sql_query("SELECT * FROM " + self.output_table_name, self.connection.connection)
+
 class QueryVisualization:
     '''A QueryVisualization provides input to Plotly on how to draw a single chart
     from the output table of its parent Query. See the Query docstring for more details.'''
@@ -172,16 +179,16 @@ class QueryVisualization:
         # Additionally, some of the attributes in viz_yaml shouldn't be passed
         # to the constructor, so those are filtered out by QVIZ_YAML_IGNORED_ATTRIBUTES.
         figure_attributes = {
-            config.QVIS_YAML_ATTR_TRANSLATIONS[key]: value
+            config.QVIS_YAML_ATTR_TRANSLATIONS[key] if key in config.QVIS_YAML_ATTR_TRANSLATIONS else key: value
             for key, value in self.viz_yaml.items()
             if key not in config.QVIZ_YAML_IGNORED_ATTRIBUTES
         }
 
-        return constructor(data_frame = self.query.get_results_records(), **figure_attributes)
+        return constructor(data_frame = self.query.generate_results_dataframe(), **figure_attributes)
 
     def export_png(self):
         '''This exports the QViz as a .png image.'''
-        self.generate_figure().write_image(self.title.replace(" ", "_").lower() + ".png")
+        self.generate_figure().write_image(self.title.replace(" ", "_").lower() + ".png", engine = "kaleido")
 
 def get_arguments():
     '''This handles the parsing of various arguments to the script.'''
@@ -287,6 +294,7 @@ def main():
     with Connection() as conn:
         conn.execute_sql_script_file("display_tables.sql")
         conn.bind_queries(config.QUERY_YAML_FILE_NAME)
+        conn.queries[0].visualizations[0].export_png()
         pdb.set_trace()
         pass # pylint: disable = unnecessary-pass
 
