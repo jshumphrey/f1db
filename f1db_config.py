@@ -19,6 +19,15 @@ RELOAD_SCRIPT_FILES = [ # List of SQL script files that get run when the DB is r
 
 CONSOLE_OUTPUT_ROW_LIMIT = 20 # Defines the maximum number of rows dumped out to the console
 
+QUERY_YAML_FILE_NAME = "f1db_queries.yml"
+QVIZ_YAML_IGNORED_ATTRIBUTES = ["figure_type"]
+QVIS_YAML_ATTR_TRANSLATIONS = {
+	"x_column_name": "x",
+	"y_column_name": "y",
+	"color_column_name": "color",
+	"value_to_color_dict": "color_discrete_map"
+}
+
 PLOTLY_FIGURE_TYPE_DICT = { # This translates a figure-type string into the actual Plotly constructor function.
 	"Line": plotly.express.line,
 	"Bar": plotly.express.bar,

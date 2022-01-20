@@ -3,7 +3,7 @@
 a SQLite database of Formula 1 race data, which is provided by the Ergast API.
 See http://ergast.com/mrd/ for more details about the API and the table structure.'''
 
-import argparse, csv, logging, os, re, requests, sqlite3, zipfile
+import argparse, csv, logging, os, re, requests, sqlite3, yaml, zipfile
 import pdb # pylint: disable = unused-import
 import f1db_config as config # This file provides a lot of config parameters and global constants
 import f1db_udfs # This file defines all user-defined functions to compile at connection setup
@@ -20,6 +20,7 @@ class Connection:
         self.connection = sqlite3.connect(config.DATABASE_FILE_NAME)
         self.connection.row_factory = sqlite3.Row
         self.compile_udfs()
+        self.queries = [] # This is populated via bind_queries()
 
         # "Aliasing" some functions of the underlying sqlite3.Connection object
         # so that they're callable directly without having to unwrap it.
@@ -47,6 +48,13 @@ class Connection:
 
         logger.debug("UDF compilation complete.")
 
+    def bind_queries(self, query_yaml_file_name):
+        '''This populates self.queries with the contents of a YAML file of query definitions.'''
+        with open(query_yaml_file_name, "r") as queries_yaml:
+            logger.debug("Binding queries...")
+            self.queries += [Query(self, query_yaml) for query_yaml in yaml.load_all(queries_yaml, Loader = yaml.SafeLoader)]
+            logger.debug("Queries bound successfully.")
+
     def execute_sql_script_file(self, file_name):
         '''This opens and executes a SQL script file via the database connection.'''
         with open(os.path.join(config.SQL_SCRIPT_FILES_DIR, file_name), "r") as sql_script:
@@ -63,35 +71,48 @@ class Connection:
         '''This exports all records of a given table in the database to a CSV file.
         By default, the file name is the table's name plus ".csv", but a custom
         output file name can be provided.'''
+        logger.debug("Acquiring cursor with which to export " + table_name + "...")
         cursor = self.connection.execute("SELECT * FROM " + table_name)
+        logger.debug("Cursor acquired successfully.")
+
         file_name = output_file_name if output_file_name else table_name + ".csv"
         with open(file_name, "w") as outfile:
+            logger.debug("Exporting " + table_name + " to " + output_file_name + "...")
             writer = csv.writer(outfile)
             writer.writerow([x[0] for x in cursor.description])
             writer.writerows([list(row) for row in cursor.fetchall()])
+            logger.debug("Export complete.")
 
 class Query:
-    '''A Query represents
+    '''A Query represents a single piece of SQL code whose output is a single database table;
+    typically a temporary table. It's fine if the SQL code generates multiple preliminary tables,
+    but the final product should be a single output table, ready to be examined or visualized.
+
+    This output table should be complete: in other words, all calculations should be done, all fields
+    should be present and named appropriately, and all values should be suitable for display to the user.
 
     A Query's data might be able to be visualized in more than one way, so a Query has a list
-    of QueryVisualizations, which interact with the Plotly module to draw various kinds of charts.
+    of QueryVisualizations. Each QueryVisualization ("QViz") contains information that is used by the
+    "Plotly" Python module; the QViz tells Plotly how to use the Query's output table to draw
+    a particular chart. Each QViz corresponds to a single chart specification.
 
-    Queries, and their Visualizations ("QVizes"), are designed to be AS LAZY AS POSSIBLE!!
-    - Queries are NOT run at compile time; we wait until they're actually requested.
+    Queries, and their Visualizations, are designed to be AS LAZY AS POSSIBLE!!
+    - Queries are NOT run when they are instantiated; we wait until they're actually requested.
     - The results of a query are NOT stored in memory; instead, we generate a new cursor when requested.
-    - QVizes do not compile into a Figure object when they are loaded
+    - QVizes do not compile into a Plotly Figure object when they are instantiated; instead, we compile
+      a new Figure object from scratch each time the QViz is actually drawn/exported.
 
     We do all of these things because the program is interactive, and might stay open for a long time.
     We want to make sure that the program does not hold onto any memory for any longer than it needs to,
     so Queries and QVizes prefer to recalculate things as needed (which in practice is relatively rare),
-    and cache as little information as possible in the meantime.''' # Todo - finish this docstring
+    and cache as little information as possible in the meantime.'''
 
-    def __init__(self, name, connection, output_table_name, sql_script_file_name):
-        self.name = name
+    def __init__(self, connection, query_yaml):
         self.connection = connection
-        self.output_table_name = output_table_name
-        self.sql_script_file_name = sql_script_file_name
-        self.visualizations = []
+        self.name = query_yaml["name"]
+        self.output_table_name = query_yaml["output_table_name"]
+        self.sql_script_file_name = query_yaml["sql_script_file_name"]
+        self.visualizations = [QueryVisualization(self, viz_yaml) for viz_yaml in query_yaml["visualizations"]]
 
         # Every time the program starts up, mark all queries as "not calculated yet."
         # The first time each query is executed, this flips to True and stays that
@@ -116,30 +137,47 @@ class Query:
         return [(x[0] for x in cursor.description)] + cursor.fetchall()
 
 class QueryVisualization:
-    '''A QueryVisualization''' # Todo - finish this docstring
+    '''A QueryVisualization provides input to Plotly on how to draw a single chart
+    from the output table of its parent Query. See the Query docstring for more details.'''
 
-    def __init__(self, query, figure_yaml):
-        '''All that we store about a QVis when it gets created is the raw dictionary
+    def __init__(self, query, viz_yaml):
+        '''All that we store for a QVis when it gets created is the raw dictionary
         from the YAML structure. We do NOT compile that into a Figure yet! That happens
         later, on demand, when generate_figure is called. See QViz.generate_figure() for why.'''
+
         self.query = query
-        self.figure_yaml = figure_yaml
-        self.title = figure_yaml["title"]
+        self.viz_yaml = viz_yaml
+        self.title = viz_yaml["title"]
 
     def generate_figure(self):
-        '''This RETURNS a Figure - it does NOT set a class attribute!!
+        '''This generates and RETURNS a Figure - it does NOT set a class attribute!!
 
         Because we want this to be as lazy as possible, we rebuild the Figure FROM SCRATCH, each time we want it.
-        This is tolerable because if we didn't do that, then the query results data would get stored in memory,
-        because you can't compile a Figure without providing its data.
+        This is tolerable because if we didn't do that, then the Query's results data would get stored in memory,
+        because you can't generating a Figure without providing its full input data records right then and there.
 
         To get around this, we don't generate the data, or the Figure, until we actually need it.
         This allows the Figure (and the data) to be garbage-collected as soon as we're done with the Figure.'''
 
-        constructor = config.PLOTLY_FIGURE_TYPE_DICT[self.figure_yaml["figure_type"]]
-        figure = constructor(
-            self.query.get_results_records()
-        )
+        # Plotly uses different Figure sub-classes for different figure types, so
+        # PLOTLY_FIGURE_TYPE_DICT translates the figure_type string in the viz_yaml
+        # into the actual subclass constructor we need to call.
+        constructor = config.PLOTLY_FIGURE_TYPE_DICT[self.viz_yaml["figure_type"]]
+
+        # figure_attributes is a dictionary of parameters that will get passed to the
+        # constructor to compile the figure. These parameters are loaded from the viz_yaml,
+        # but because we want to use more-readable attribute names in viz_yaml, the
+        # parameter names first get run through QVIS_YAML_ATTR_TRANSLATIONS.
+        #
+        # Additionally, some of the attributes in viz_yaml shouldn't be passed
+        # to the constructor, so those are filtered out by QVIZ_YAML_IGNORED_ATTRIBUTES.
+        figure_attributes = {
+            config.QVIS_YAML_ATTR_TRANSLATIONS[key]: value
+            for key, value in self.viz_yaml.items()
+            if key not in config.QVIZ_YAML_IGNORED_ATTRIBUTES
+        }
+
+        return constructor(data_frame = self.query.get_results_records(), **figure_attributes)
 
     def export_png(self):
         '''This exports the QViz as a .png image.'''
@@ -248,7 +286,11 @@ def main():
 
     with Connection() as conn:
         conn.execute_sql_script_file("display_tables.sql")
+        conn.bind_queries(config.QUERY_YAML_FILE_NAME)
         pdb.set_trace()
         pass # pylint: disable = unnecessary-pass
 
 main()
+
+# Todo: Rework lap_times_ext to remove running_total_time_str and running_seconds (since those get stored on disk)
+# Todo: Add a UDF to export a running milliseconds total as a time string
