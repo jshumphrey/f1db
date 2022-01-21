@@ -1,6 +1,6 @@
 # f1db
 
-This Python code maintians a SQLite database of Formula One race data, and provides some functionality to facilitate the process of running queries against it, and visualizing the output of those queries.
+This Python code maintains a SQLite database of Formula One race data, and provides some functionality to facilitate the process of running queries against it, and visualizing the output of those queries.
 
 ## Requirements
 
@@ -17,6 +17,20 @@ You'll need these Python modules installed. On Linux, some or all of these might
 ## Running the program
 
 Run `f1db.py` from the command line. (Right now, the command line just dumps you at the debug console, so you'll need to read the code to find out what objects and functions are available. A proper menu for commands is coming soon.)
+
+### Command-line arguments
+
+#### Functional
+
+- `-r`, `--reload`: Delete the SQLite database file, and regenerate it from the downloaded CSV files.
+- `-d`, `--download`: Download a fresh copy of the CSV files from the Ergast API. Also rebuilds the database, as per `--reload`.
+  - You'll want to do this if you're expecting the Ergast data to have changed, such as after the completion of a Grand Prix.
+  - If this is your first time running the program, you'll need to specify this argument so that the program has raw-data files to work with.
+
+#### Logging
+
+- `-q`, `--quiet`: Suppress all logging/informational output, except for error messages.
+- `-v`, `--verbose`: Display additional debug output.
 
 ## Maintaining the program
 
