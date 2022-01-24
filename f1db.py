@@ -3,6 +3,9 @@
 a SQLite database of Formula 1 race data, which is provided by the Ergast API.
 See http://ergast.com/mrd/ for more details about the API and the table structure.'''
 
+# Todo: Add some fancy exception handling to check to see whether
+# the optional pip packages are installed. Also check for Kaleido!!!
+# See https://stackoverflow.com/questions/301134/how-to-import-a-module-given-its-name-as-string
 import argparse, csv, logging, os, pandas, re, requests, sqlite3, yaml, zipfile
 import pdb # pylint: disable = unused-import
 import f1db_config as config # This file provides a lot of config parameters and global constants
