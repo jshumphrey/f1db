@@ -168,6 +168,7 @@ class QueryVisualization:
         self.query = query
         self.viz_yaml = viz_yaml
         self.title = viz_yaml["title"]
+        self.figure_type = viz_yaml["figure_type"]
 
     def generate_figure(self):
         '''This generates and RETURNS a Figure - it does NOT set a class attribute!!
@@ -303,8 +304,8 @@ def define_menus(connection):
     # You need to define all of your Menus first, so that any MenuItems below can refer to them if they want.
     # For example, if you want a MenuItem to invoke a submenu, that submenu has to already exist as a variable.
     main_menu = menus.Menu(connection, text = "Main menu.")
-    queries_submenu = menus.Menu(connection, text = "From this menu, you can run any of the pre-defined queries below.")
-    sql_scripts_submenu = menus.Menu(connection, text = "From this menu, you can run any of the SQL script files below.")
+    queries_submenu = menus.Menu(connection, parent_menu = main_menu, text = "From this menu, you can run any of the pre-defined queries below.")
+    sql_scripts_submenu = menus.Menu(connection, parent_menu = main_menu, text = "From this menu, you can run any of the SQL script files below.")
 
     main_menu.menu_items += [
         menus.MenuItem(main_menu, "Rebuild the database from the raw-data files.", reload_database),
@@ -317,11 +318,25 @@ def define_menus(connection):
             prompt_text = "Enter your SELECT statement: ",
             exit_action = "WAIT"
         ),
-        menus.MenuItem(main_menu, "Execute the contents of a SQL script file.", sql_scripts_submenu.display),
-        menus.MenuItem(main_menu, "Run one or more pre-defined queries against the database.", queries_submenu.display),
+        menus.MenuItem(main_menu, "Execute the contents of a SQL script file.", sql_scripts_submenu.run),
+        menus.MenuItem(main_menu, "Run one or more pre-defined queries against the database.", queries_submenu.run),
         menus.MenuItem(main_menu, "Drop to the PDB debug console.", pdb.set_trace),
         menus.MenuItem(main_menu, "Exit the program.", sys.exit, function_args = [0])
     ]
+
+    for query in connection.queries:
+        query_menu = menus.Menu(connection, parent_menu = queries_submenu, text = query.name)
+        queries_submenu.menu_items.append(menus.MenuItem(queries_submenu, query.name, query_menu.run))
+        query_menu.menu_items += [
+            menus.MenuItem(query_menu, "Run this query to calculate its results table.", query.calculate_results_table),
+            menus.MenuItem(query_menu, "Export this query's results table to a CSV.", query.export_table_to_csv)
+        ]
+        query_menu.menu_items += [
+            menus.MenuItem(query_menu, f"Export the {qviz.figure_type} chart titled {qviz.title} as a PNG.", qviz.export_png)
+            for qviz in query.visualizations
+        ]
+
+
 
 def main():
     '''Execute top-level functionality.'''
