@@ -6,10 +6,17 @@ See http://ergast.com/mrd/ for more details about the API and the table structur
 # Todo: Add some fancy exception handling to check to see whether
 # the optional pip packages are installed. Also check for Kaleido!!!
 # See https://stackoverflow.com/questions/301134/how-to-import-a-module-given-its-name-as-string
-import argparse, csv, logging, os, pandas, re, requests, sqlite3, yaml, zipfile
+
+# Standard-library imports
+import argparse, csv, logging, os, re, sqlite3, sys, textwrap, zipfile
 import pdb # pylint: disable = unused-import
+
+# Third-party imports
+import pandas, requests, yaml
+
 import f1db_config as config # This file provides a lot of config parameters and global constants
 import f1db_udfs # This file defines all user-defined functions to compile at connection setup
+import f1db_menus as menus # This file adds the functionality for command-line menus for user interaction
 
 # Configure the logger so that we have a logger object to use.
 logging.basicConfig(level = logging.NOTSET)
@@ -146,6 +153,8 @@ class Query:
         if not self.has_been_calculated:
             self.calculate_results_table()
         return pandas.read_sql_query("SELECT * FROM " + self.output_table_name, self.connection.connection)
+
+    # Todo: Move connection.export_to_csv here, add it as a method of a query.
 
 class QueryVisualization:
     '''A QueryVisualization provides input to Plotly on how to draw a single chart
@@ -290,8 +299,35 @@ def reload_database():
             connection.execute_sql_script_file(script_file)
             logger.info(script_file + " run successfully.")
 
+def define_menus(connection):
+    # You need to define all of your Menus first, so that any MenuItems below can refer to them if they want.
+    # For example, if you want a MenuItem to invoke a submenu, that submenu has to already exist as a variable.
+    main_menu = menus.Menu(connection, text = "Main menu.")
+    queries_submenu = menus.Menu(connection, text = "From this menu, you can run any of the pre-defined queries below.")
+    sql_scripts_submenu = menus.Menu(connection, text = "From this menu, you can run any of the SQL script files below.")
+
+    main_menu.menu_items += [
+        menus.MenuItem(main_menu, "Rebuild the database from the raw-data files.", reload_database),
+        menus.MenuItem(main_menu, "Redownload the raw-data files from the Ergast API.", redownload_files),
+        menus.MenuItem(
+            main_menu,
+            "Execute a single SELECT statement and print its output.",
+            main_menu.connection.print_select_results,
+            requires_input = True,
+            prompt_text = "Enter your SELECT statement: ",
+            exit_action = "WAIT"
+        ),
+        menus.MenuItem(main_menu, "Execute the contents of a SQL script file.", sql_scripts_submenu.display),
+        menus.MenuItem(main_menu, "Run one or more pre-defined queries against the database.", queries_submenu.display),
+        menus.MenuItem(main_menu, "Drop to the PDB debug console.", pdb.set_trace),
+        menus.MenuItem(main_menu, "Exit the program.", sys.exit, function_args = [0])
+    ]
+
 def main():
     '''Execute top-level functionality.'''
+    # Todo: If we don't find a DB on file, ask the user if they want to build the DB.
+    # Todo: If we don't find CSVs on file, ask the user if they want to download the CSVs.
+
     args = get_arguments()
     handle_arguments(args)
 
@@ -302,7 +338,8 @@ def main():
         pdb.set_trace()
         pass # pylint: disable = unnecessary-pass
 
-main()
+if __name__ == "__main__":
+    main()
 
 # Todo: Rework lap_times_ext to remove running_total_time_str and running_seconds (since those get stored on disk)
 # Todo: Add a UDF to export a running milliseconds total as a time string

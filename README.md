@@ -6,6 +6,7 @@ This Python code maintains a SQLite database of Formula One race data, and provi
 
 You'll need these Python modules installed. On Linux, some or all of these might be available from your distro's package manager; if you're not on Linux or they're not available, you can always get them from  `pip`.
 
+- `console-menu`
 - `kaleido`
 - `pandas`
 - `plotly`
