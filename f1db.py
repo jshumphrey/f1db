@@ -384,7 +384,7 @@ def define_menus(connection):
             for qviz in query.visualizations
         ]
 
-    for script_file in os.listdir(config.SQL_SCRIPT_FILES_DIR):
+    for script_file in [file for file in os.listdir(config.SQL_SCRIPT_FILES_DIR) if not file == config.TABLE_DEFINITION_SCRIPT_FILE]:
         sql_scripts_submenu.menu_items.append(menus.MenuItem(
             sql_scripts_submenu,
             script_file,
