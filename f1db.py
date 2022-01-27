@@ -8,7 +8,7 @@ See http://ergast.com/mrd/ for more details about the API and the table structur
 # See https://stackoverflow.com/questions/301134/how-to-import-a-module-given-its-name-as-string
 
 # Standard-library imports
-import argparse, csv, logging, os, re, sqlite3, sys, zipfile
+import argparse, csv, logging, os, re, sqlite3, zipfile
 import pdb # pylint: disable = unused-import
 
 # Third-party imports
@@ -332,9 +332,7 @@ def define_menus(connection):
             exit_action = "WAIT"
         ),
         menus.MenuItem(main_menu, "Execute the contents of a SQL script file.", sql_scripts_submenu.run),
-        menus.MenuItem(main_menu, "Run one or more pre-defined queries against the database.", queries_submenu.run),
-        menus.MenuItem(main_menu, "Drop to the PDB debug console.", pdb.set_trace),
-        menus.MenuItem(main_menu, "Exit the program.", sys.exit, function_args = [0])
+        menus.MenuItem(main_menu, "Run one or more pre-defined queries against the database.", queries_submenu.run)
     ]
 
     for query in connection.queries:

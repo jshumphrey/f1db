@@ -1,5 +1,5 @@
 #! /usr/bin/env/python3
-import os, platform, sys, textwrap
+import os, pdb, platform, sys, textwrap
 
 # Set up a global TextWrapper (seriously, do you really want to pass this around to everyone?)
 # and configure it to wrap text nicely for all of the displayed console menus.
@@ -8,6 +8,10 @@ wrapper = textwrap.TextWrapper()
 def no_op():
     '''This function does nothing. It can be used to have a menu item do nothing when executed.'''
     pass # pylint: disable = unnecessary-pass
+
+def wait_for_input():
+    '''This function simply waits for the user to press Enter to continue execution.'''
+    input("Press Enter to continue...")
 
 def clear_console():
     '''This function makes the requisite system call, depending on the platform
@@ -28,6 +32,27 @@ class Menu:
         self.text = text
         self.allows_multi_select = allows_multi_select
         self.menu_items = []
+        self.enumerated_items = None
+
+    def get_enumerated_items(self):
+        if self.enumerated_items:
+            return self.enumerated_items
+
+        extended_menu_items = self.menu_items.copy()
+        if self.parent_menu:
+            extended_menu_items.append(MenuItem(
+                self,
+                "Return to the previous menu.",
+                no_op,
+                exit_action = "BREAK"
+            ))
+        extended_menu_items += [
+            MenuItem(self, "Drop to the PDB debug console.", pdb.set_trace),
+            MenuItem(self, "Exit the program.", sys.exit, function_args = [0])
+        ]
+
+        self.enumerated_items = dict(enumerate(extended_menu_items, 1))
+        return self.enumerated_items
 
     def get_user_selections(self):
         '''This wraps the process of requesting the input string of menu selections
@@ -53,30 +78,37 @@ class Menu:
         if non_integer_inputs:
             raise InputError("The following selections are not numbers: " + ", ".join(non_integer_inputs) + "!")
 
-    def run(self):
-        while True: # Main body of the display loop.
-            # Clear the console, and print the menu's header.
-            clear_console()
-            print(wrapper.fill(self.text))
+    def draw(self):
+        '''This wraps the process of drawing all of this menu's text and menu items.
+        Note that the menu items here will include additional menu items from extended_menu_items,
+        typically a "go back", an "exit" and a "drop to debug" option.'''
+        # Clear the console, and print the menu's header.
+        clear_console()
+        print(wrapper.fill(self.text))
+        print() # Prints a blank line.
 
-            # Print each of the menu items.
-            enumerated_items = dict(enumerate(self.menu_items, 1))
-            for index, menu_item in enumerated_items.items():
-                print(wrapper.fill(f"{index!s}. {menu_item.text}"))
+        for index, menu_item in self.get_enumerated_items():
+            print(wrapper.fill(f"{index!s}. {menu_item.text}"))
+            print() # Prints a blank line.
+
+    def run(self):
+        '''This is the main loop that actually displays the menu and handles the user's input.'''
+        while True:
+            self.draw() # Display all of this menu's text and menu items.
 
             # Take the user's input and handle their selections.
             try:
                 selections = self.get_user_selections()
             except InputError as e: # If the user provides bad input, display its message and have them try again.
                 print(str(e))
-                input("Press Enter to continue...")
+                wait_for_input()
                 continue
 
             # Execute the functionality of each selected menu item.
-            for item in [enumerated_items[int(selection)] for selection in selections]:
+            for item in [self.enumerated_items[int(selection)] for selection in selections]:
                 item.execute_function()
                 if item.exit_action == "WAIT":
-                    input("Press Enter to continue...")
+                    wait_for_input()
                 elif item.exit_action == "BREAK":
                     break
                 elif item.exit_action == "EXIT":
