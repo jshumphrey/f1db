@@ -8,7 +8,7 @@ See http://ergast.com/mrd/ for more details about the API and the table structur
 # See https://stackoverflow.com/questions/301134/how-to-import-a-module-given-its-name-as-string
 
 # Standard-library imports
-import argparse, csv, logging, os, re, sqlite3, sys, textwrap, zipfile
+import argparse, csv, logging, os, re, sqlite3, sys, zipfile
 import pdb # pylint: disable = unused-import
 
 # Third-party imports
@@ -336,7 +336,12 @@ def define_menus(connection):
             for qviz in query.visualizations
         ]
 
+    for script_file in os.listdir(config.SQL_SCRIPT_FILES_DIR):
+        sql_scripts_submenu.menu_items.append(menus.MenuItem(sql_scripts_submenu, script_file, connection.execute_sql_script_file(script_file)))
 
+    # Todo: Have some way to have the menus rebuild themselves.
+
+    return (main_menu, queries_submenu, sql_scripts_submenu)
 
 def main():
     '''Execute top-level functionality.'''
@@ -349,9 +354,9 @@ def main():
     with Connection() as conn:
         conn.execute_sql_script_file("display_tables.sql")
         conn.bind_queries(config.QUERY_YAML_FILE_NAME)
-        # conn.queries[0].visualizations[0].export_png()
-        pdb.set_trace()
-        pass # pylint: disable = unnecessary-pass
+
+        (main_menu, queries_submenu, sql_scripts_submenu) = define_menus(conn)
+        main_menu.run()
 
 if __name__ == "__main__":
     main()
