@@ -154,7 +154,10 @@ class Query:
             self.calculate_results_table()
         return pandas.read_sql_query("SELECT * FROM " + self.output_table_name, self.connection.connection)
 
-    # Todo: Move connection.export_to_csv here, add it as a method of a query.
+    def export_table_to_csv(self):
+        '''This function is a property of the query's connection, but defining it here
+        exposes it at the Query level as well.'''
+        self.connection.export_table_to_csv(self.output_table_name)
 
 class QueryVisualization:
     '''A QueryVisualization provides input to Plotly on how to draw a single chart
@@ -308,8 +311,18 @@ def define_menus(connection):
     sql_scripts_submenu = menus.Menu(connection, parent_menu = main_menu, text = "From this menu, you can run any of the SQL script files below.")
 
     main_menu.menu_items += [
-        menus.MenuItem(main_menu, "Rebuild the database from the raw-data files.", reload_database),
-        menus.MenuItem(main_menu, "Redownload the raw-data files from the Ergast API.", redownload_files),
+        menus.MenuItem(
+            main_menu,
+            "Rebuild the database from the raw-data files.",
+            reload_database,
+            exit_action = None if logger.level == logging.WARNING else "WAIT"
+        ),
+        menus.MenuItem(
+            main_menu,
+            "Redownload the raw-data files from the Ergast API.",
+            redownload_files,
+            exit_action = None if logger.level == logging.WARNING else "WAIT"
+        ),
         menus.MenuItem(
             main_menu,
             "Execute a single SELECT statement and print its output.",
@@ -337,7 +350,12 @@ def define_menus(connection):
         ]
 
     for script_file in os.listdir(config.SQL_SCRIPT_FILES_DIR):
-        sql_scripts_submenu.menu_items.append(menus.MenuItem(sql_scripts_submenu, script_file, connection.execute_sql_script_file(script_file)))
+        sql_scripts_submenu.menu_items.append(menus.MenuItem(
+            sql_scripts_submenu,
+            script_file,
+            connection.execute_sql_script_file,
+            function_args = script_file
+        ))
 
     # Todo: Have some way to have the menus rebuild themselves.
 

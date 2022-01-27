@@ -61,7 +61,7 @@ class Menu:
 
             # Print each of the menu items.
             enumerated_items = dict(enumerate(self.menu_items, 1))
-            for index, menu_item in enumerated_items.values():
+            for index, menu_item in enumerated_items.items():
                 print(wrapper.fill(f"{index!s}. {menu_item.text}"))
 
             # Take the user's input and handle their selections.
