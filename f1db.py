@@ -229,14 +229,40 @@ def handle_arguments(arguments):
     if arguments.download:
         logger.debug("Download option provided, redownloading files")
         redownload_files()
+    elif not os.path.exists(config.CSV_FILES_DIR) or not os.listdir(config.CSV_FILES_DIR):
+        print(f"{config.CSV_FILES_DIR} missing or empty!")
+        user_input = input("Do you want to redownload the CSV files from the source? [y/n]: ")
+        if user_input.lower() in ["y", "yes"]:
+            redownload_files()
+        else:
+            raise FileNotFoundError(f"./{config.CSV_FILES_DIR} missing or empty and user declined to redownload from source")
 
-    # We want to reload the DB if the files were re-downloaded, even if not explicitly specified.
-    if arguments.reload or arguments.download:
-        logger.debug("Download or reload arguments provided, reloading database")
+    if arguments.reload:
+        logger.debug("Reload argument provided, reloading database")
         reload_database()
+
+    if arguments.download and not arguments.reload:
+        print("New CSV files downloaded from source, but -r/--reload not specified!")
+        print("If you do not rebuild the database from these new CSV files,")
+        print("any updates will not be reflected in the database.")
+        user_input = input("Do you want to rebuild the database from the CSV files? [y/n]: ")
+        if user_input.lower() in ["y", "yes"]:
+            reload_database()
+
+    if not os.path.exists(config.DATABASE_FILE_NAME):
+        print(f"{config.DATABASE_FILE_NAME} not found!")
+        user_input = input("Do you want to rebuild the database from the CSV files? [y/n]: ")
+        if user_input.lower() in ["y", "yes"]:
+            reload_database()
+        else:
+            raise FileNotFoundError(f"/{config.DATABASE_FILE_NAME} not found and user declined to rebuild from source")
 
 def redownload_files():
     '''This handles the process of redownloading the CSV files from the Ergast website.'''
+    # Create the CSV files directory if it doesn't already exist.
+    if not os.path.exists(config.CSV_FILES_DIR):
+        os.makedirs(config.CSV_FILES_DIR)
+
     # Clear out all of the existing CSV files.
     logger.debug("Clearing out " + config.CSV_FILES_DIR + "...")
     for file_name in os.listdir(config.CSV_FILES_DIR):
@@ -289,7 +315,9 @@ def reload_database():
             connection.connection.executemany(insert_statement, records)
             connection.connection.commit()
 
-    os.remove(config.DATABASE_FILE_NAME) # Delete the SQLite database entirely
+    if os.path.exists(config.DATABASE_FILE_NAME):
+        os.remove(config.DATABASE_FILE_NAME) # Delete the SQLite database entirely
+
     with Connection() as connection:
         logger.debug("Defining base tables...")
         connection.execute_sql_script_file(config.TABLE_DEFINITION_SCRIPT_FILE)
@@ -371,8 +399,6 @@ def define_menus(connection):
 
 def main():
     '''Execute top-level functionality.'''
-    # Todo: If we don't find a DB on file, ask the user if they want to build the DB.
-    # Todo: If we don't find CSVs on file, ask the user if they want to download the CSVs.
 
     args = get_arguments()
     handle_arguments(args)

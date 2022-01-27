@@ -25,9 +25,8 @@ This will display a menu of various functions and actions you can take, includin
 #### Functional
 
 - `-r`, `--reload`: Delete the SQLite database file, and regenerate it from the downloaded CSV files.
-- `-d`, `--download`: Download a fresh copy of the CSV files from the Ergast API. Also rebuilds the database, as per `--reload`.
+- `-d`, `--download`: Download a fresh copy of the CSV files from the Ergast API.
   - You'll want to do this if you're expecting the Ergast data to have changed, such as after the completion of a Grand Prix.
-  - If this is your first time running the program, you'll need to specify this argument so that the program has raw-data files to work with.
 
 #### Logging
 
