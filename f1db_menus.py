@@ -32,11 +32,20 @@ class Menu:
         self.text = text
         self.allows_multi_select = allows_multi_select
         self.menu_items = []
-        self.enumerated_items = None
 
-    def get_enumerated_items(self):
-        if self.enumerated_items:
-            return self.enumerated_items
+        self._enumerated_items = None # This is instantiated to None but will be set by get_enumerated_items.
+
+    @property
+    def enumerated_items(self):
+        '''This constructs a dictionary of this Menu's menu items, with each item assigned to
+        an index value.
+
+        Importantly, these enumerated items are only intended to be used for display purposes,
+        such as when drawing the menu's items and handling user selections. As such, this function
+        also includes some "default" menu items that are applicable to all menus: an "exit the program"
+        option, a "drop to debug" option, and, if applicable, a "go back to the previous menu" option.'''
+        if self._enumerated_items:
+            return self._enumerated_items
 
         extended_menu_items = self.menu_items.copy()
         if self.parent_menu:
@@ -51,8 +60,8 @@ class Menu:
             MenuItem(self, "Exit the program.", sys.exit, function_args = [0])
         ]
 
-        self.enumerated_items = dict(enumerate(extended_menu_items, 1))
-        return self.enumerated_items
+        self._enumerated_items = dict(enumerate(extended_menu_items, 1))
+        return self._enumerated_items
 
     def get_user_selections(self):
         '''This wraps the process of requesting the input string of menu selections
@@ -78,6 +87,10 @@ class Menu:
         if non_integer_inputs:
             raise InputError("The following selections are not numbers: " + ", ".join(non_integer_inputs) + "!")
 
+        out_of_bounds_inputs = [x for x in user_input.split() if int(x) not in self.enumerated_items]
+        if out_of_bounds_inputs:
+            raise InputError("The following selections are not in this menu's selections: " + ", ".join(out_of_bounds_inputs) + "!")
+
     def draw(self):
         '''This wraps the process of drawing all of this menu's text and menu items.
         Note that the menu items here will include additional menu items from extended_menu_items,
@@ -87,9 +100,9 @@ class Menu:
         print(wrapper.fill(self.text))
         print() # Prints a blank line.
 
-        for index, menu_item in self.get_enumerated_items():
+        for index, menu_item in self.enumerated_items.items():
             print(wrapper.fill(f"{index!s}. {menu_item.text}"))
-            print() # Prints a blank line.
+        print() # Prints a blank line.
 
     def run(self):
         '''This is the main loop that actually displays the menu and handles the user's input.'''
@@ -110,7 +123,7 @@ class Menu:
                 if item.exit_action == "WAIT":
                     wait_for_input()
                 elif item.exit_action == "BREAK":
-                    break
+                    return
                 elif item.exit_action == "EXIT":
                     sys.exit(0)
 
@@ -127,6 +140,7 @@ class MenuItem:
         self.prompt_text = prompt_text
 
     def execute_function(self):
+        '''This executes the menu item's function, with any configured arguments.'''
         if self.requires_input:
             user_input = input(self.prompt_text)
             self.function_args.insert(0, user_input)
