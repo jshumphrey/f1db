@@ -1,4 +1,12 @@
 #! /usr/bin/env/python3
+'''This file implements functionality for some simple command-line menus
+to allow users to access the program's functionality without needing to
+call codebase objects and functions directly.
+
+Users will still need to modify the config file, SQL scripts, and YAML files
+to set up queries, visualizations, etc., but at least they don't have to
+modify the actual Python code... right...? Definitely an improvement. Probably.
+'''
 import os, pdb, platform, sys, textwrap
 
 # Set up a global TextWrapper (seriously, do you really want to pass this around to everyone?)
@@ -26,6 +34,18 @@ class InputError(Exception):
     pass # pylint: disable = unnecessary-pass
 
 class Menu:
+    '''A Menu represents a single screen from which the user can select from a list of options.
+    These options are represented as MenuItems in menu.menu_items.
+
+    The main function that makes a Menu "do things" is menu.run(). Menus loop forever until
+    something causes them to exit; this would normally be the user entering the "go back" menu option
+    or the "exit the program" menu option, but could also be any kind of uncaught exception.
+    If neither of these things happen, the default behavior is to re-display the current menu
+    after the user's selection has been received and executed.
+
+    Menus can have submenus underneath them; a submenu is also a Menu and has its own MenuItems.
+    To have a MenuItem display a submenu, set its "function" argument to [submenu].run .
+    '''
     def __init__(self, connection, parent_menu = None, text = None, allows_multi_select = False):
         self.connection = connection
         self.parent_menu = parent_menu
@@ -104,6 +124,8 @@ class Menu:
             print(wrapper.fill(f"{index!s}. {menu_item.text}"))
         print() # Prints a blank line.
 
+        # Todo: Print a separator between the "normal" items and the special default items.
+
     def run(self):
         '''This is the main loop that actually displays the menu and handles the user's input.'''
         while True:
@@ -127,8 +149,26 @@ class Menu:
                 elif item.exit_action == "EXIT":
                     sys.exit(0)
 
-
 class MenuItem:
+    '''A MenuItem is a single selectable option of a Menu. Each MenuItem carries out some kind of
+    function, which is the "function" argument in the constructor. This should be a Python function;
+    when the MenuItem is selected, the function will get called with the list of args and the dict of
+    kwargs provided in the constructor; if neither of these are provided, the function will be run
+    with no arguments.
+
+    If the function you want to call requires custom input from the user, you can set requires_input
+    to True; this will prompt the user for input (the text of the prompt comes from prompt_text),
+    and passes the user's input as the first argument to the function. (Yes, this is a bit of a kludge.)
+
+    The default behavior for a Menu, after executing a MenuItem, is to simply immediately re-display the menu.
+    If you want to change this behavior, set the exit_action argument.
+    - A value of "WAIT" will prompt the user to press Enter before the screen is cleared and
+      the Menu is re-displayed; this is useful if this MenuItem is printing anything out to the screen
+      that the user wants to see.
+    - A value of "BREAK" will break out of the Menu's infinite loop, returning you to the Menu's parent.
+    - A value of "EXIT" will exit the entire program immediately.
+    Each Menu comes with options to do these last two things automatically, so you don't need to define your own.
+    '''
     def __init__(self, menu, text, function, function_args = None, function_kwargs = None, exit_action = None, requires_input = False, prompt_text = ""):
         self.menu = menu
         self.text = text

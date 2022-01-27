@@ -304,11 +304,19 @@ def reload_database():
             logger.info(script_file + " run successfully.")
 
 def define_menus(connection):
+    '''This is a big POS kludge of a function that does the work of defining all of the menus
+    for this program. This should really, really be outsourced somewhere, but it... sort of works
+    for right now.'''
     # You need to define all of your Menus first, so that any MenuItems below can refer to them if they want.
     # For example, if you want a MenuItem to invoke a submenu, that submenu has to already exist as a variable.
     main_menu = menus.Menu(connection, text = "Main menu.")
     queries_submenu = menus.Menu(connection, parent_menu = main_menu, text = "From this menu, you can run any of the pre-defined queries below.")
-    sql_scripts_submenu = menus.Menu(connection, parent_menu = main_menu, text = "From this menu, you can run any of the SQL script files below.")
+    sql_scripts_submenu = menus.Menu(
+        connection,
+        parent_menu = main_menu,
+        text = "From this menu, you can run any of the SQL script files below.",
+        allows_multi_select = True
+    )
 
     main_menu.menu_items += [
         menus.MenuItem(
@@ -336,7 +344,7 @@ def define_menus(connection):
     ]
 
     for query in connection.queries:
-        query_menu = menus.Menu(connection, parent_menu = queries_submenu, text = query.name)
+        query_menu = menus.Menu(connection, parent_menu = queries_submenu, text = query.name, allows_multi_select = True)
         queries_submenu.menu_items.append(menus.MenuItem(queries_submenu, query.name, query_menu.run))
         query_menu.menu_items += [
             menus.MenuItem(query_menu, "Run this query to calculate its results table.", query.calculate_results_table),
@@ -352,7 +360,7 @@ def define_menus(connection):
             sql_scripts_submenu,
             script_file,
             connection.execute_sql_script_file,
-            function_args = script_file
+            function_args = [script_file]
         ))
 
     # Todo: Have some way to have the menus rebuild themselves.
@@ -371,7 +379,7 @@ def main():
         conn.execute_sql_script_file("display_tables.sql")
         conn.bind_queries(config.QUERY_YAML_FILE_NAME)
 
-        (main_menu, queries_submenu, sql_scripts_submenu) = define_menus(conn)
+        (main_menu, queries_submenu, sql_scripts_submenu) = define_menus(conn) # pylint: disable = unused-variable
         main_menu.run()
 
 if __name__ == "__main__":
