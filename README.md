@@ -6,7 +6,6 @@ This Python code maintains a SQLite database of Formula One race data, and provi
 
 You'll need these Python modules installed. On Linux, some or all of these might be available from your distro's package manager; if you're not on Linux or they're not available, you can always get them from  `pip`.
 
-- `console-menu`
 - `kaleido`
 - `pandas`
 - `plotly`
@@ -17,7 +16,9 @@ You'll need these Python modules installed. On Linux, some or all of these might
 
 ## Running the program
 
-Run `f1db.py` from the command line. (Right now, the command line just dumps you at the debug console, so you'll need to read the code to find out what objects and functions are available. A proper menu for commands is coming soon.)
+Run `python f1db.py` from the command line.
+
+This will display a menu of various functions and actions you can take, including running pre-defined queries against the DB, exporting data out to CSVs, and exporting pre-defined query visualizations as PNG images.
 
 ### Command-line arguments
 

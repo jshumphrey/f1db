@@ -14,6 +14,7 @@ import pdb # pylint: disable = unused-import
 # Third-party imports
 import pandas, requests, yaml
 
+# Other Python modules that are part of this program
 import f1db_config as config # This file provides a lot of config parameters and global constants
 import f1db_udfs # This file defines all user-defined functions to compile at connection setup
 import f1db_menus as menus # This file adds the functionality for command-line menus for user interaction
@@ -364,6 +365,7 @@ def define_menus(connection):
         ))
 
     # Todo: Have some way to have the menus rebuild themselves.
+    # Todo: Move this code somewhere sane instead of this POS.
 
     return (main_menu, queries_submenu, sql_scripts_submenu)
 
