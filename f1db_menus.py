@@ -66,12 +66,7 @@ class Menu:
         '''This wraps the process of generating the default menu items for this menu.'''
         default_items = [MenuSeparator()]
         if self.parent_menu:
-            default_items.append(MenuItem(
-                self,
-                "Return to the previous menu.",
-                no_op,
-                exit_action = "BREAK"
-            ))
+            default_items += [MenuItem(self, "Return to the previous menu.", no_op, exit_action = "BREAK")]
         default_items += [
             MenuItem(self, "Drop to the PDB debug console.", pdb.set_trace),
             MenuItem(self, "Exit the program.", sys.exit, function_args = [0])
