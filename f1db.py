@@ -83,13 +83,13 @@ class Connection:
         '''This exports all records of a given table in the database to a CSV file.
         By default, the file name is the table's name plus ".csv", but a custom
         output file name can be provided.'''
-        logger.debug("Acquiring cursor with which to export " + table_name + "...")
+        logger.debug(f"Acquiring cursor with which to export {table_name}...")
         cursor = self.connection.execute("SELECT * FROM " + table_name)
         logger.debug("Cursor acquired successfully.")
 
         file_name = output_file_name if output_file_name else table_name + ".csv"
         with open(file_name, "w") as outfile:
-            logger.debug("Exporting " + table_name + " to " + output_file_name + "...")
+            logger.debug(f"Exporting {table_name} to {file_name}...")
             writer = csv.writer(outfile)
             writer.writerow([x[0] for x in cursor.description])
             writer.writerows([list(row) for row in cursor.fetchall()])
@@ -360,6 +360,7 @@ def define_menus(connection):
             redownload_files,
             exit_action = None if logger.level == logging.WARNING else "WAIT"
         ),
+        menus.MenuSeparator(),
         menus.MenuItem(
             main_menu,
             "Execute a single SELECT statement and print its output.",
@@ -369,7 +370,14 @@ def define_menus(connection):
             exit_action = "WAIT"
         ),
         menus.MenuItem(main_menu, "Execute the contents of a SQL script file.", sql_scripts_submenu.run),
-        menus.MenuItem(main_menu, "Run one or more pre-defined queries against the database.", queries_submenu.run)
+        menus.MenuItem(main_menu, "Run one or more pre-defined queries against the database.", queries_submenu.run),
+        menus.MenuItem(
+            main_menu,
+            "Export a table to a CSV file.",
+            main_menu.connection.export_table_to_csv,
+            requires_input = True,
+            prompt_text = "Enter the table name to be exported: "
+        )
     ]
 
     for query in connection.queries:
@@ -377,7 +385,8 @@ def define_menus(connection):
         queries_submenu.menu_items.append(menus.MenuItem(queries_submenu, query.name, query_menu.run))
         query_menu.menu_items += [
             menus.MenuItem(query_menu, "Run this query to calculate its results table.", query.calculate_results_table),
-            menus.MenuItem(query_menu, "Export this query's results table to a CSV.", query.export_table_to_csv)
+            menus.MenuItem(query_menu, "Export this query's results table to a CSV.", query.export_table_to_csv),
+            menus.MenuSeparator()
         ]
         query_menu.menu_items += [
             menus.MenuItem(query_menu, f"Export the {qviz.figure_type} chart titled {qviz.title} as a PNG.", qviz.export_png)

@@ -33,6 +33,13 @@ class InputError(Exception):
     '''This is a custom exception raised when a user's input is unacceptable.'''
     pass # pylint: disable = unnecessary-pass
 
+class MenuSeparator:
+    '''A MenuSeparator is a dummy object that allows you to insert "separator" lines
+    within a Menu's list of MenuItems. You may optionally provide some text to display;
+    otherwise, the separator is simply represented by a blank line.'''
+    def __init__(self, text = ""):
+        self.text = text
+
 class Menu:
     '''A Menu represents a single screen from which the user can select from a list of options.
     These options are represented as MenuItems in menu.menu_items.
@@ -63,25 +70,38 @@ class Menu:
         Importantly, these enumerated items are only intended to be used for display purposes,
         such as when drawing the menu's items and handling user selections. As such, this function
         also includes some "default" menu items that are applicable to all menus: an "exit the program"
-        option, a "drop to debug" option, and, if applicable, a "go back to the previous menu" option.'''
-        if self._enumerated_items:
+        option, a "drop to debug" option, and, if applicable, a "go back to the previous menu" option.
+        '''
+        if self._enumerated_items is not None:
             return self._enumerated_items
 
-        extended_menu_items = self.menu_items.copy()
+        extended_menu_items = self.menu_items.copy() + self.generate_default_menu_items()
+        enumerated_items = {}
+        index = 1
+
+        for item in extended_menu_items:
+            if isinstance(item, MenuSeparator):
+                enumerated_items
+
+        self._enumerated_items = dict(enumerate(extended_menu_items, 1))
+        return self._enumerated_items
+
+    def generate_default_menu_items(self):
+        '''This wraps the process of generating the default menu items for this menu.'''
+        default_items = [MenuSeparator()]
         if self.parent_menu:
-            extended_menu_items.append(MenuItem(
+            default_items.append(MenuItem(
                 self,
                 "Return to the previous menu.",
                 no_op,
                 exit_action = "BREAK"
             ))
-        extended_menu_items += [
+        default_items += [
             MenuItem(self, "Drop to the PDB debug console.", pdb.set_trace),
             MenuItem(self, "Exit the program.", sys.exit, function_args = [0])
         ]
 
-        self._enumerated_items = dict(enumerate(extended_menu_items, 1))
-        return self._enumerated_items
+        return default_items
 
     def get_user_selections(self):
         '''This wraps the process of requesting the input string of menu selections
