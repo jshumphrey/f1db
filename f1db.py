@@ -424,3 +424,4 @@ if __name__ == "__main__":
 
 # Todo: Rework lap_times_ext to remove running_total_time_str and running_seconds (since those get stored on disk)
 # Todo: Add a UDF to export a running milliseconds total as a time string
+# Todo: Add a function to ping the Ergast REST API to check for the latest GP on file (has it been updated yet?)

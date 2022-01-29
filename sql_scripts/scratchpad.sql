@@ -12,7 +12,7 @@ FROM drivers AS drivers
     AND races.year >= 1990
 
 WHERE
-  NOT (drivers.code = "\N")
+  NOT (drivers.code = '\N')
 
 ORDER BY
   drivers.surname ASC

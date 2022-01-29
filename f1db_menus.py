@@ -58,33 +58,9 @@ class Menu:
         self.parent_menu = parent_menu
         self.text = text
         self.allows_multi_select = allows_multi_select
+
         self.menu_items = []
-
-        self._enumerated_items = None # This is instantiated to None but will be set by get_enumerated_items.
-
-    @property
-    def enumerated_items(self):
-        '''This constructs a dictionary of this Menu's menu items, with each item assigned to
-        an index value.
-
-        Importantly, these enumerated items are only intended to be used for display purposes,
-        such as when drawing the menu's items and handling user selections. As such, this function
-        also includes some "default" menu items that are applicable to all menus: an "exit the program"
-        option, a "drop to debug" option, and, if applicable, a "go back to the previous menu" option.
-        '''
-        if self._enumerated_items is not None:
-            return self._enumerated_items
-
-        extended_menu_items = self.menu_items.copy() + self.generate_default_menu_items()
-        enumerated_items = {}
-        index = 1
-
-        for item in extended_menu_items:
-            if isinstance(item, MenuSeparator):
-                enumerated_items
-
-        self._enumerated_items = dict(enumerate(extended_menu_items, 1))
-        return self._enumerated_items
+        self.default_menu_items = self.generate_default_menu_items()
 
     def generate_default_menu_items(self):
         '''This wraps the process of generating the default menu items for this menu.'''
@@ -102,6 +78,13 @@ class Menu:
         ]
 
         return default_items
+
+    def get_enumerated_items(self):
+        '''This returns a dict of index: item for all DISPLAYED MenuItems for this Menu.
+        "Displayed", here, means that enumerated_items DOES include the default menu items,
+        but does NOT include menu separators; those do not receive an index since they're
+        not selectable by the user.'''
+        return {i: x for i, x in enumerate([x for x in self.menu_items + self.default_menu_items if not isinstance(x, MenuSeparator)], 1)}
 
     def get_user_selections(self):
         '''This wraps the process of requesting the input string of menu selections
@@ -127,7 +110,7 @@ class Menu:
         if non_integer_inputs:
             raise InputError("The following selections are not numbers: " + ", ".join(non_integer_inputs) + "!")
 
-        out_of_bounds_inputs = [x for x in user_input.split() if int(x) not in self.enumerated_items]
+        out_of_bounds_inputs = [x for x in user_input.split() if int(x) not in self.get_enumerated_items()]
         if out_of_bounds_inputs:
             raise InputError("The following selections are not in this menu's selections: " + ", ".join(out_of_bounds_inputs) + "!")
 
@@ -140,11 +123,15 @@ class Menu:
         print(wrapper.fill(self.text))
         print() # Prints a blank line.
 
-        for index, menu_item in self.enumerated_items.items():
-            print(wrapper.fill(f"{index!s}. {menu_item.text}"))
-        print() # Prints a blank line.
+        index = 1
+        for menu_item in self.menu_items + self.default_menu_items:
+            if isinstance(menu_item, MenuSeparator):
+                print(wrapper.fill(menu_item.text))
+            else:
+                print(wrapper.fill(f"{index!s}. {menu_item.text}"))
+                index += 1
 
-        # Todo: Print a separator between the "normal" items and the special default items.
+        print() # Prints a blank line.
 
     def run(self):
         '''This is the main loop that actually displays the menu and handles the user's input.'''
@@ -160,7 +147,7 @@ class Menu:
                 continue
 
             # Execute the functionality of each selected menu item.
-            for item in [self.enumerated_items[int(selection)] for selection in selections]:
+            for item in [self.get_enumerated_items()[int(selection)] for selection in selections]:
                 item.execute_function()
                 if item.exit_action == "WAIT":
                     wait_for_input()
@@ -201,9 +188,6 @@ class MenuItem:
 
     def execute_function(self):
         '''This executes the menu item's function, with any configured arguments.'''
-        if self.requires_input:
-            user_input = input(self.prompt_text)
-            self.function_args.insert(0, user_input)
-
-        self.function(*self.function_args, **self.function_kwargs)
+        user_input = [input(self.prompt_text)] if self.requires_input else []
+        self.function(*(user_input + self.function_args), **self.function_kwargs)
         return self.exit_action
