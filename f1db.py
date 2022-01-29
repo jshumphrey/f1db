@@ -84,7 +84,7 @@ class Connection:
         By default, the file name is the table's name plus ".csv", but a custom
         output file name can be provided.'''
         logger.debug(f"Acquiring cursor with which to export {table_name}...")
-        cursor = self.connection.execute("SELECT * FROM " + table_name)
+        cursor = self.connection.execute(f"SELECT * FROM {table_name}")
         logger.debug("Cursor acquired successfully.")
 
         file_name = output_file_name if output_file_name else table_name + ".csv"
@@ -145,7 +145,7 @@ class Query:
         The output table is calculated first, if the Query hasn't been calculated yet.'''
         if not self.has_been_calculated:
             self.calculate_results_table()
-        cursor = self.connection.execute("SELECT * FROM " + self.output_table_name)
+        cursor = self.connection.execute(f"SELECT * FROM {self.output_table_name}")
         return [(x[0] for x in cursor.description)] + cursor.fetchall()
 
     def generate_results_dataframe(self):
@@ -153,7 +153,7 @@ class Query:
         The output table is calculated first, if the Query hasn't been calculated yet.'''
         if not self.has_been_calculated:
             self.calculate_results_table()
-        return pandas.read_sql_query("SELECT * FROM " + self.output_table_name, self.connection.connection)
+        return pandas.read_sql_query(f"SELECT * FROM {self.output_table_name}", self.connection.connection)
 
     def export_table_to_csv(self):
         '''This function is a property of the query's connection, but defining it here
@@ -264,7 +264,7 @@ def redownload_files():
         os.makedirs(config.CSV_FILES_DIR)
 
     # Clear out all of the existing CSV files.
-    logger.debug("Clearing out " + config.CSV_FILES_DIR + "...")
+    logger.debug(f"Clearing out {config.CSV_FILES_DIR }...")
     for file_name in os.listdir(config.CSV_FILES_DIR):
         if file_name.endswith(".csv"):
             os.remove(os.path.join(config.CSV_FILES_DIR, file_name))
@@ -328,9 +328,9 @@ def reload_database():
         logger.info("Base tables populated.")
 
         for script_file in config.RELOAD_SCRIPT_FILES:
-            logger.info("Running " + script_file + "...")
+            logger.info(f"Running {script_file}...")
             connection.execute_sql_script_file(script_file)
-            logger.info(script_file + " run successfully.")
+            logger.info(f"{script_file} run successfully.")
 
 def define_menus(connection):
     '''This is a big POS kludge of a function that does the work of defining all of the menus
