@@ -13,22 +13,6 @@ import os, pdb, platform, sys, textwrap
 # and configure it to wrap text nicely for all of the displayed console menus.
 wrapper = textwrap.TextWrapper()
 
-def no_op():
-    '''This function does nothing. It can be used to have a menu item do nothing when executed.'''
-    pass # pylint: disable = unnecessary-pass
-
-def wait_for_input():
-    '''This function simply waits for the user to press Enter to continue execution.'''
-    input("Press Enter to continue...")
-
-def clear_console():
-    '''This function makes the requisite system call, depending on the platform
-    the program is running on, to clear all text from the command-line window.'''
-    if platform.system().lower() == 'windows':
-        os.system("cls")
-    else:
-        os.system("reset")
-
 class InputError(Exception):
     '''This is a custom exception raised when a user's input is unacceptable.'''
     pass # pylint: disable = unnecessary-pass
@@ -66,7 +50,7 @@ class Menu:
         '''This wraps the process of generating the default menu items for this menu.'''
         default_items = [MenuSeparator()]
         if self.parent_menu:
-            default_items += [MenuItem(self, "Return to the previous menu.", no_op, exit_action = "BREAK")]
+            default_items += [MenuItem(self, "Return to the previous menu.", lambda *args: None, exit_action = "BREAK")] # The lambda here acts as a no-op.
         default_items += [
             MenuItem(self, "Drop to the PDB debug console.", pdb.set_trace),
             MenuItem(self, "Exit the program.", sys.exit, function_args = [0])
@@ -114,7 +98,10 @@ class Menu:
         Note that the menu items here will include additional menu items from extended_menu_items,
         typically a "go back", an "exit" and a "drop to debug" option.'''
         # Clear the console, and print the menu's header.
-        clear_console()
+        if platform.system().lower() == 'windows':
+            os.system("cls")
+        else:
+            os.system("reset")
         print(wrapper.fill(self.text))
         print() # Prints a blank line.
 
@@ -130,6 +117,11 @@ class Menu:
 
     def run(self):
         '''This is the main loop that actually displays the menu and handles the user's input.'''
+        def wait_for_input():
+            '''This waits for the user to press Enter. Useful when the user
+            needs to see some displayed text before it disappears.'''
+            input("Press Enter to continue...")
+
         while True:
             self.draw() # Display all of this menu's text and menu items.
 
