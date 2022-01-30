@@ -25,7 +25,7 @@ so that it can store all of the information needed to compile the function at a 
 When this file is imported ("import f1db_udfs"), the list of UDFs can be accessed under the name
 "f1db_udfs.USER_DEFINED_FUNCTIONS", which yields the list of dicts at the bottom of this file.
 '''
-import inspect, math, statistics
+import inspect, math, statistics, time
 import pdb # pylint: disable = unused-import
 
 def udf_power(base, exponent):
@@ -35,6 +35,11 @@ def udf_power(base, exponent):
 def udf_sqrt(base):
     '''This UDF implements square-root calculation.'''
     return math.sqrt(base)
+
+def udf_ms_to_hhmmss(milliseconds):
+    '''This UDF takes in an integer number of milliseconds and returns the formatted string
+    of the milliseconds represented as hours:minutes:seconds. Useful for "total time" ms values.'''
+    return time.strftime("%H:%M:%S", time.gmtime(milliseconds / 1000))
 
 class udf_stdev: # pylint: disable = missing-function-docstring
     '''This UDF implements standard-deviation calculation.

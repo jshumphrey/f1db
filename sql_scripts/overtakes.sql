@@ -48,7 +48,7 @@ SELECT DISTINCT
   CASE
     WHEN retirements.driver_id IS NOT NULL THEN 'R'
     WHEN pit_stops.lap = lap_positions.lap THEN 'P'
-    WHEN pit_stops.seconds > overtaking_lap_times.running_seconds - overtaken_lap_times.running_seconds THEN 'P'
+    WHEN pit_stops.milliseconds > overtaking_lap_times.running_milliseconds - overtaken_lap_times.running_milliseconds THEN 'P'
     WHEN lap_positions.lap = 1 AND (previous_lap.position - cars_behind_this_lap_results.grid) <= 2 THEN 'S'
     ELSE 'T'
   END AS overtake_type,
@@ -57,7 +57,7 @@ SELECT DISTINCT
     THEN retirements.retirement_type
     WHEN pit_stops.lap = lap_positions.lap
     THEN 'Pit Stop (Pit Entry)'
-    WHEN pit_stops.seconds > overtaking_lap_times.running_seconds - overtaken_lap_times.running_seconds
+    WHEN pit_stops.milliseconds > overtaking_lap_times.running_milliseconds - overtaken_lap_times.running_milliseconds
     THEN 'Pit Stop (Pit Exit)'
     WHEN lap_positions.lap = 1 AND (previous_lap.position - cars_behind_this_lap_results.grid) <= 2
     THEN 'Start'

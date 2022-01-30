@@ -11,7 +11,7 @@ SELECT DISTINCT
   overtaking_lap_times.time AS overtaking_lap_time,
   overtaken_lap_times.time AS overtaken_lap_time,
   ROUND((overtaken_lap_times.seconds - overtaken_lap_stats.avg_seconds) / overtaken_lap_stats.stdev_seconds, 3) AS overtaken_sigmas,
-  ROUND(overtaking_lap_times.running_seconds - overtaken_lap_times.running_seconds, 3) AS gap,
+  ROUND((overtaking_lap_times.running_milliseconds - overtaken_lap_times.running_milliseconds) / 1000, 3) AS gap,
 
   CASE
     WHEN overtakes.lap = overtaking_lap_times.lap THEN overtakes.overtake_desc

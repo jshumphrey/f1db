@@ -15,9 +15,7 @@ DROP TABLE IF EXISTS lap_times_ext;
 CREATE TABLE lap_times_ext AS
 SELECT DISTINCT
   lap_times.*,
-  SUM(milliseconds) OVER running_total AS running_milliseconds,
-  SUM(seconds) OVER running_total AS running_seconds,
-  STRFTIME('%H:%M:%f', 'NOW', 'START OF DAY', '+' || SUM(seconds) OVER running_total || ' SECONDS') AS running_time_str
+  SUM(milliseconds) OVER running_total AS running_milliseconds
 FROM lap_times
 WINDOW
   running_total AS (
