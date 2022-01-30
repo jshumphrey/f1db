@@ -257,6 +257,13 @@ def handle_arguments(arguments):
         else:
             raise FileNotFoundError(f"/{config.DATABASE_FILE_NAME} not found and user declined to rebuild from source")
 
+def get_latest_grand_prix():
+    '''This queries the Ergast API's endpoint shortcut for the most recent race
+    and returns its season and name. Useful for checking see if new data is ready.'''
+    race_json = requests.get("http://ergast.com/api/f1/current/last/results.json").json()
+    race = race_json["MRData"]["RaceTable"]["Races"][0]
+    print (f"The latest GP is the {race['season']} {race['raceName']}.")
+
 def redownload_files():
     '''This handles the process of redownloading the CSV files from the Ergast website.'''
     # Create the CSV files directory if it doesn't already exist.
@@ -348,16 +355,17 @@ def define_menus(connection):
     )
 
     main_menu.menu_items += [
-        menus.MenuItem(
-            main_menu,
-            "Rebuild the database from the raw-data files.",
-            reload_database,
-            exit_action = None if logger.level == logging.WARNING else "WAIT"
-        ),
+        menus.MenuItem(main_menu, "Ask the Ergast API what its latest Grand Prix is.", get_latest_grand_prix, exit_action = "WAIT"),
         menus.MenuItem(
             main_menu,
             "Redownload the raw-data files from the Ergast API.",
             redownload_files,
+            exit_action = None if logger.level == logging.WARNING else "WAIT"
+        ),
+        menus.MenuItem(
+            main_menu,
+            "Rebuild the database from the raw-data files.",
+            reload_database,
             exit_action = None if logger.level == logging.WARNING else "WAIT"
         ),
         menus.MenuSeparator(),
@@ -421,5 +429,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# Todo: Add a function to ping the Ergast REST API to check for the latest GP on file (has it been updated yet?)
