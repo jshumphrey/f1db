@@ -307,11 +307,6 @@ class Menu:
 
     def run(self):
         '''This is the main loop that actually displays the menu and handles the user's input.'''
-        def wait_for_input():
-            '''This waits for the user to press Enter. Useful when the user
-            needs to see some displayed text before it disappears.'''
-            input("Press Enter to continue...")
-
         while True:
             self.draw() # Display all of this menu's text and menu items.
 
@@ -340,6 +335,12 @@ class MenuItem:
     kwargs provided in the constructor; if neither of these are provided, the function will be run
     with no arguments.
 
+    To catch specific exceptions during the execution of this MenuItem's functionality, you can provide
+    a list of exception types (e.g. exceptions_to_catch = [KeyError, sqlite3.OperationalError] .)
+    If one of these exceptions occurs, the script will print out that an error occurred and wait for
+    the user to press Enter to continue - but the script will not crash out; instead, the normal
+    exit action will occur (typically just redrawing the menu).
+
     If the function you want to call requires custom input from the user, you can set requires_input
     to True; this will prompt the user for input (the text of the prompt comes from prompt_text),
     and passes the user's input as the first argument to the function. (Yes, this is a bit of a kludge.)
@@ -353,20 +354,35 @@ class MenuItem:
     - A value of "EXIT" will exit the entire program immediately.
     Each Menu comes with options to do these last two things automatically, so you don't need to define your own.
     '''
-    def __init__(self, menu, text, function, function_args = None, function_kwargs = None, exit_action = None, requires_input = False, prompt_text = ""):
+    def __init__(self, menu, text, function, function_args = None, function_kwargs = None, exceptions_to_catch = None, requires_input = False, prompt_text = "", exit_action = None):
         self.menu = menu
         self.text = text
         self.function = function
+
         self.function_args = function_args if function_args else []
         self.function_kwargs = function_kwargs if function_kwargs else {}
-        self.exit_action = exit_action
+        self.exceptions_to_catch = exceptions_to_catch if exceptions_to_catch else []
+
         self.requires_input = requires_input
         self.prompt_text = prompt_text
+
+        self.exit_action = exit_action
 
     def execute_function(self):
         '''This executes the menu item's function, with any configured arguments.'''
         user_input = [input(self.prompt_text)] if self.requires_input else []
-        self.function(*(user_input + self.function_args), **self.function_kwargs)
+
+        try:
+            self.function(*(user_input + self.function_args), **self.function_kwargs)
+        except Exception as thrown_exception: # pylint: disable = broad-except
+            if not [x for x in self.exceptions_to_catch if isinstance(thrown_exception, x)]:
+                raise # If we weren't configured to safely catch this exception, raise it as normal.
+            else:
+                print(wrapper.fill(f"ERROR! When trying to execute the menu item '{self.text}', an error occurred."))
+                print(wrapper.fill(f"The error message received was: {thrown_exception.__class__.__name__}: {thrown_exception!s}"))
+                if self.exit_action != "WAIT": # The function's normal exit action will get called, so
+                    wait_for_input() # if it's already going to make the user press Enter, don't do it twice.
+
         return self.exit_action
 
 class MenuSeparator:
@@ -375,6 +391,11 @@ class MenuSeparator:
     otherwise, the separator is simply represented by a blank line.'''
     def __init__(self, text = ""):
         self.text = text
+
+def wait_for_input():
+    '''This waits for the user to press Enter. Useful when the user
+    needs to see some displayed text before it disappears.'''
+    input("Press Enter to continue...")
 
 def get_arguments():
     '''This handles the parsing of various arguments to the script.'''
@@ -514,13 +535,8 @@ def define_menus(connection):
     # You need to define all of your Menus first, so that any MenuItems below can refer to them if they want.
     # For example, if you want a MenuItem to invoke a submenu, that submenu has to already exist as a variable.
     main_menu = Menu(connection, text = "Main menu.")
-    queries_submenu = Menu(connection, parent_menu = main_menu, text = "From this menu, you can run any of the pre-defined queries below.")
-    sql_scripts_submenu = Menu(
-        connection,
-        parent_menu = main_menu,
-        text = "From this menu, you can run any of the SQL script files below.",
-        allows_multi_select = True
-    )
+    queries_submenu = Menu(connection, parent_menu = main_menu, text = "Run any of the pre-defined queries below.")
+    sql_scripts_submenu = Menu(connection, parent_menu = main_menu, text = "Run any of the SQL script files below.", allows_multi_select = True)
 
     main_menu.menu_items += [
         MenuItem(main_menu, "Ask the Ergast API what its latest Grand Prix is.", get_latest_grand_prix, exit_action = "WAIT"),
@@ -541,6 +557,7 @@ def define_menus(connection):
             main_menu,
             "Execute a single SELECT statement and print its output.",
             main_menu.connection.print_select_results,
+            exceptions_to_catch = [sqlite3.OperationalError],
             requires_input = True,
             prompt_text = "Enter your SELECT statement: ",
             exit_action = "WAIT"
@@ -560,7 +577,7 @@ def define_menus(connection):
         query_menu = Menu(connection, parent_menu = queries_submenu, text = query.name, allows_multi_select = True)
         queries_submenu.menu_items.append(MenuItem(queries_submenu, query.name, query_menu.run))
         query_menu.menu_items += [
-            MenuItem(query_menu, "Run this query to calculate its results table.", query.calculate_results_table),
+            MenuItem(query_menu, "Run this query to calculate its results table.", query.calculate_results_table, exceptions_to_catch = [sqlite3.OperationalError]),
             MenuItem(query_menu, "Export this query's results table to a CSV.", query.export_table_to_csv),
             MenuSeparator()
         ]
@@ -574,7 +591,8 @@ def define_menus(connection):
             sql_scripts_submenu,
             script_file,
             connection.execute_sql_script_file,
-            function_args = [script_file]
+            function_args = [script_file],
+            exceptions_to_catch = [sqlite3.OperationalError]
         ))
 
     # Todo: Have some way to have the menus rebuild themselves.
