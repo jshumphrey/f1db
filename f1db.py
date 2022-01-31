@@ -501,7 +501,7 @@ def reload_database():
         for file_name in os.listdir(config.CSV_FILES_DIR):
             with open(os.path.join(config.CSV_FILES_DIR, file_name), "r") as infile:
                 reader = csv.DictReader(infile)
-                records = [[record[field_name] for field_name in reader.fieldnames] for record in reader]
+                records = [[record[field_name] if record[field_name] != r'\N' else None for field_name in reader.fieldnames] for record in reader]
 
             table_name = file_name.replace(".csv", "")
             field_names_tuple = re.sub(r'([a-z])([A-Z])', r'\1_\2', str(tuple(reader.fieldnames)).replace("'", "")).lower()
@@ -595,7 +595,7 @@ def define_menus(connection):
             exceptions_to_catch = [sqlite3.OperationalError]
         ))
 
-    # Todo: Have some way to have the menus rebuild themselves.
+    # Todo: Have some way to have the menus rebuild themselves. In particular, the query menu needs to be refreshable.
     # Todo: Move this code somewhere sane instead of this POS.
 
     return (main_menu, queries_submenu, sql_scripts_submenu)
@@ -615,3 +615,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# Todo: Fucking gigantic todo: Rewrite the entire Menu class using `curses`
+# Todo: Add a CLI argument that runs a SQL script file, prints its output, and exits back to the shell.
+# Todo: Remember to send a modmail to make sure this doesn't get you banned for self-promotion
