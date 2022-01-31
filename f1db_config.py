@@ -4,12 +4,14 @@ import plotly.io, plotly.express
 
 DATABASE_FILE_NAME = "f1.db"
 
-CSV_FILES_DIR = "./raw_data_files"
+BASE_CSV_FILES_DIR = "./raw_data_files"
+CUSTOM_CSV_FILES_DIR = "./custom_data_files"
 ERGAST_DOWNLOAD_URL = "http://ergast.com/downloads/f1db_csv.zip"
 ERGAST_ZIP_FILE_NAME = "f1db.zip"
 
 SQL_SCRIPT_FILES_DIR = "./sql_scripts"
-TABLE_DEFINITION_SCRIPT_FILE = "define_base_tables.sql" # SQL script file that defines the DB tables
+BASE_TABLE_DEFINITION_SCRIPT_FILE = "define_base_tables.sql" # SQL script file that defines the DB tables
+CUSTOM_TABLE_DEFINITION_SCRIPT_FILE = "define_custom_tables.sql" # SQL script file that defines the DB tables
 RELOAD_SCRIPT_FILES = [ # List of SQL script files that get run when the DB is reloaded from scratch
     "extended_base_tables.sql",
     "retirements.sql",

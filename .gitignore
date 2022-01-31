@@ -14,3 +14,6 @@
 
 # Exclude any .png files exported at the top level.
 /*.png
+
+# Exclude some particular SQL scripts.
+/sql_scripts/scratchpad.sql

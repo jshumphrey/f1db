@@ -418,13 +418,13 @@ def handle_arguments(arguments):
     if arguments.download:
         logger.debug("Download option provided, redownloading files")
         redownload_files()
-    elif not os.path.exists(config.CSV_FILES_DIR) or not os.listdir(config.CSV_FILES_DIR):
-        print(f"{config.CSV_FILES_DIR} missing or empty!")
+    elif not os.path.exists(config.BASE_CSV_FILES_DIR) or not os.listdir(config.BASE_CSV_FILES_DIR):
+        print(f"{config.BASE_CSV_FILES_DIR} missing or empty!")
         user_input = input("Do you want to redownload the CSV files from the source? [y/n]: ")
         if user_input.lower() in ["y", "yes"]:
             redownload_files()
         else:
-            raise FileNotFoundError(f"./{config.CSV_FILES_DIR} missing or empty and user declined to redownload from source")
+            raise FileNotFoundError(f"./{config.BASE_CSV_FILES_DIR} missing or empty and user declined to redownload from source")
 
     if arguments.reload:
         logger.debug("Reload argument provided, reloading database")
@@ -456,31 +456,31 @@ def get_latest_grand_prix():
 def redownload_files():
     '''This handles the process of redownloading the CSV files from the Ergast website.'''
     # Create the CSV files directory if it doesn't already exist.
-    if not os.path.exists(config.CSV_FILES_DIR):
-        os.makedirs(config.CSV_FILES_DIR)
+    if not os.path.exists(config.BASE_CSV_FILES_DIR):
+        os.makedirs(config.BASE_CSV_FILES_DIR)
 
     # Clear out all of the existing CSV files.
-    logger.debug(f"Clearing out {config.CSV_FILES_DIR }...")
-    for file_name in os.listdir(config.CSV_FILES_DIR):
+    logger.debug(f"Clearing out {config.BASE_CSV_FILES_DIR }...")
+    for file_name in os.listdir(config.BASE_CSV_FILES_DIR):
         if file_name.endswith(".csv"):
-            os.remove(os.path.join(config.CSV_FILES_DIR, file_name))
+            os.remove(os.path.join(config.BASE_CSV_FILES_DIR, file_name))
     logger.debug("Files removed.")
 
     logger.info("Downloading CSV zip file from Ergast...")
-    with open(os.path.join(config.CSV_FILES_DIR, config.ERGAST_ZIP_FILE_NAME), "wb") as downfile:
+    with open(os.path.join(config.BASE_CSV_FILES_DIR, config.ERGAST_ZIP_FILE_NAME), "wb") as downfile:
         for data in requests.get(config.ERGAST_DOWNLOAD_URL, stream = True).iter_content():
             downfile.write(data)
     logger.info("Download complete.")
 
     # Extract the zip file we downloaded to the CSV file directory.
     logger.info("Extracting CSV files...")
-    with zipfile.ZipFile(os.path.join(config.CSV_FILES_DIR, config.ERGAST_ZIP_FILE_NAME), "r") as csv_zip:
-        csv_zip.extractall(config.CSV_FILES_DIR)
+    with zipfile.ZipFile(os.path.join(config.BASE_CSV_FILES_DIR, config.ERGAST_ZIP_FILE_NAME), "r") as csv_zip:
+        csv_zip.extractall(config.BASE_CSV_FILES_DIR)
     logger.info("Extraction complete.")
 
     # Remove the downloaded zip file.
     logger.debug("Removing the downloaded zip file...")
-    os.remove(os.path.join(config.CSV_FILES_DIR, config.ERGAST_ZIP_FILE_NAME))
+    os.remove(os.path.join(config.BASE_CSV_FILES_DIR, config.ERGAST_ZIP_FILE_NAME))
     logger.debug("Zip file removed.")
 
 def reload_database():
@@ -494,12 +494,11 @@ def reload_database():
     Yes, we could theoretically return the connection instead of spinning up a new one,
     but connections are cheap, and this helps keep the functions to a single responsibility.'''
 
-    def populate_base_tables(connection):
-        '''This function populates the base tables of the database from the CSV files
-        downloaded from the Ergast API website. This must not be run until after the
-        base tables have been defined, via the TABLE_DEFINITION_SCRIPT_FILE.'''
-        for file_name in os.listdir(config.CSV_FILES_DIR):
-            with open(os.path.join(config.CSV_FILES_DIR, file_name), "r") as infile:
+    def populate_tables_from_csvs(connection, csv_file_dir):
+        '''This function populates tables of the database from CSV files in a directory
+        on disk. This must not be run until after the relevant tables have been defined.'''
+        for file_name in os.listdir(csv_file_dir):
+            with open(os.path.join(csv_file_dir, file_name), "r") as infile:
                 reader = csv.DictReader(infile)
                 records = [[record[field_name] if record[field_name] != r'\N' else None for field_name in reader.fieldnames] for record in reader]
 
@@ -516,12 +515,20 @@ def reload_database():
 
     with Connection() as connection:
         logger.debug("Defining base tables...")
-        connection.execute_sql_script_file(config.TABLE_DEFINITION_SCRIPT_FILE)
+        connection.execute_sql_script_file(config.BASE_TABLE_DEFINITION_SCRIPT_FILE)
         logger.debug("Base tables defined.")
 
         logger.info("Populating base tables...")
-        populate_base_tables(connection)
+        populate_tables_from_csvs(connection, config.BASE_CSV_FILES_DIR)
         logger.info("Base tables populated.")
+
+        logger.debug("Defining custom data tables...")
+        connection.execute_sql_script_file(config.CUSTOM_TABLE_DEFINITION_SCRIPT_FILE)
+        logger.debug("Custom data tables defined.")
+
+        logger.info("Populating custom data tables...")
+        populate_tables_from_csvs(connection, config.CUSTOM_CSV_FILES_DIR)
+        logger.info("Custom data tables populated.")
 
         for script_file in config.RELOAD_SCRIPT_FILES:
             logger.info(f"Running {script_file}...")
@@ -586,7 +593,10 @@ def define_menus(connection):
             for qviz in query.visualizations
         ]
 
-    for script_file in [file for file in os.listdir(config.SQL_SCRIPT_FILES_DIR) if not file == config.TABLE_DEFINITION_SCRIPT_FILE]:
+    for script_file in [
+        file for file in os.listdir(config.SQL_SCRIPT_FILES_DIR)
+        if file not in [config.BASE_TABLE_DEFINITION_SCRIPT_FILE, config.CUSTOM_TABLE_DEFINITION_SCRIPT_FILE]
+    ]:
         sql_scripts_submenu.menu_items.append(MenuItem(
             sql_scripts_submenu,
             script_file,
