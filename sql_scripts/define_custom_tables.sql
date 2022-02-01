@@ -14,6 +14,6 @@ CREATE TABLE "liveries" (
   "constructor_ref" VARCHAR(255) NOT NULL DEFAULT '',
   "start_year" INT(11) NOT NULL DEFAULT '0',
   "end_year" INT(11) NULL DEFAULT '0',
-  "hex_code" VARCHAR(255) NOT NULL DEFAULT '',
+  "primary_hex_code" VARCHAR(255) NOT NULL DEFAULT '',
   PRIMARY KEY ("constructor_ref", "start_year", "end_year")
 );
