@@ -96,7 +96,7 @@ class Connection:
         file_name = output_file_name if output_file_name else table_name + ".csv"
         with open(file_name, "w") as outfile:
             logger.debug(f"Exporting {table_name} to {file_name}...")
-            writer = csv.writer(outfile)
+            writer = csv.writer(outfile, quoting = csv.QUOTE_NONNUMERIC)
             writer.writerow([x[0] for x in cursor.description])
             writer.writerows([list(row) for row in cursor.fetchall()])
             logger.debug("Export complete.")
@@ -575,6 +575,7 @@ def define_menus(connection):
             main_menu,
             "Export a table to a CSV file.",
             main_menu.connection.export_table_to_csv,
+            exceptions_to_catch = [sqlite3.OperationalError],
             requires_input = True,
             prompt_text = "Enter the table name to be exported: "
         )
@@ -629,3 +630,4 @@ if __name__ == "__main__":
 # Todo: Fucking gigantic todo: Rewrite the entire Menu class using `curses`
 # Todo: Add a CLI argument that runs a SQL script file, prints its output, and exits back to the shell.
 # Todo: Remember to send a modmail to make sure this doesn't get you banned for self-promotion
+# Todo: Remember to add PJ Tierney to the README once the constructor colors gets added in
