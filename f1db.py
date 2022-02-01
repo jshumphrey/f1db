@@ -630,4 +630,3 @@ if __name__ == "__main__":
 # Todo: Fucking gigantic todo: Rewrite the entire Menu class using `curses`
 # Todo: Add a CLI argument that runs a SQL script file, prints its output, and exits back to the shell.
 # Todo: Remember to send a modmail to make sure this doesn't get you banned for self-promotion
-# Todo: Remember to add PJ Tierney to the README once the constructor colors gets added in
