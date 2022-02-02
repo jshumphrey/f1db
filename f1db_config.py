@@ -16,7 +16,8 @@ RELOAD_SCRIPT_FILES = [ # List of SQL script files that get run when the DB is r
     "extended_base_tables.sql",
     "retirements.sql",
     "lap_positions.sql", # Depends on retirements
-    "overtakes.sql" # Depends on lap_positions and retirements
+    "overtakes.sql", # Depends on lap_positions and retirements
+	"team_driver_ranks.sql"
 ]
 
 CONSOLE_OUTPUT_ROW_LIMIT = 20 # Defines the maximum number of rows dumped out to the console
