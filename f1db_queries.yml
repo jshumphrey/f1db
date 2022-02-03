@@ -9,4 +9,12 @@ visualizations:
     y_column_name: num_overtakes
     color_column_name: overtake_type
     value_to_color_dict: {Track: green, Pit: red}
+#---
+#name: driver_standings_pretty
+#sql_script_file_name: standings_pretty.sql
+#output_table_name: driver_standings_pretty
+#visualizations:
+#  - figure_type: Line
+#    title: Driver Standings (Points)
+#    x_column_name:
 ...

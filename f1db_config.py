@@ -14,10 +14,11 @@ BASE_TABLE_DEFINITION_SCRIPT_FILE = "define_base_tables.sql" # SQL script file t
 CUSTOM_TABLE_DEFINITION_SCRIPT_FILE = "define_custom_tables.sql" # SQL script file that defines the DB tables
 RELOAD_SCRIPT_FILES = [ # List of SQL script files that get run when the DB is reloaded from scratch
     "extended_base_tables.sql",
+	"team_driver_ranks.sql",
+	"drives.sql",
     "retirements.sql",
     "lap_positions.sql", # Depends on retirements
-    "overtakes.sql", # Depends on lap_positions and retirements
-	"team_driver_ranks.sql"
+    "overtakes.sql" # Depends on lap_positions and retirements
 ]
 
 CONSOLE_OUTPUT_ROW_LIMIT = 20 # Defines the maximum number of rows dumped out to the console

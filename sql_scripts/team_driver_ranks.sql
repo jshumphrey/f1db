@@ -1,5 +1,5 @@
 DROP TABLE IF EXISTS team_driver_ranks;
-CREATE TEMP TABLE team_driver_ranks AS
+CREATE TABLE team_driver_ranks AS
 SELECT DISTINCT
   races.year,
   constructors.constructor_id,
@@ -46,6 +46,6 @@ WINDOW
 ORDER BY
   races.year,
   constructors.constructor_id,
-  team_rank ASC
+  team_driver_rank ASC
 
 ;
