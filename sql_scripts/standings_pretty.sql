@@ -8,12 +8,16 @@ SELECT DISTINCT
   drivers.full_name,
   drivers.surname,
   drivers.code,
-  constructors.constructor_id,
+  COALESCE(drives.drive_id, 0) AS drive_id,
+  drives.is_first_drive_of_season AS is_first_drive,
+  drives.is_final_drive_of_season AS is_final_drive,
+  COALESCE(constructors.constructor_id, 0) AS constructor_id,
   constructors.short_name AS constructor_name,
-  liveries.primary_hex_code AS hex_code,
-  team_driver_ranks.team_driver_rank,
+  COALESCE(liveries.primary_hex_code, "#000000") AS hex_code,
+  COALESCE(team_driver_ranks.team_driver_rank, 0) AS team_driver_rank,
   driver_standings.points,
-  driver_standings.position
+  driver_standings.position,
+  RANK() OVER legend_rank AS legend_rank
 
 FROM drivers
   INNER JOIN driver_standings ON driver_standings.driver_id = drivers.driver_id
@@ -23,7 +27,7 @@ FROM drivers
   LEFT JOIN drives
     ON drives.year = races.year
     AND drives.driver_id = drivers.driver_id
-    AND drives.first_round <= races.round
+    AND drives.first_round <= races.round + 1
     AND (
       drives.is_final_drive_of_season
       OR drives.last_round >= races.round
@@ -39,6 +43,15 @@ FROM drivers
     AND team_driver_ranks.driver_id = drivers.driver_id
 
 WHERE races.year = 2017
+
+WINDOW
+  legend_rank AS (
+    PARTITION BY
+      races.year
+    ORDER BY
+      liveries.primary_hex_code,
+      team_driver_ranks.team_driver_rank
+  )
 
 ORDER BY
   races.round,
