@@ -2,7 +2,10 @@
 # pylint: disable = missing-module-docstring
 
 import f1db, pandas, plotly.graph_objects as go
+import logging
 import pdb # pylint: disable = unused-import
+
+f1db.logger.setLevel(logging.INFO)
 
 with f1db.Connection() as conn:
     conn.execute_sql_script_file("standings_pretty.sql")

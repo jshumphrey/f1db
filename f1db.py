@@ -606,7 +606,8 @@ def define_menus(connection):
             exceptions_to_catch = [sqlite3.OperationalError]
         ))
 
-    # Todo: Have some way to have the menus rebuild themselves. In particular, the query menu needs to be refreshable.
+    # Todo: Have some way to have the menus rebuild themselves.
+    # The scripts and queries menu will not detect any new files.
     # Todo: Move this code somewhere sane instead of this POS.
 
     return (main_menu, queries_submenu, sql_scripts_submenu)

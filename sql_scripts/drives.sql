@@ -32,7 +32,8 @@ SELECT DISTINCT
   first_race.drive_id,
   first_race.constructor_id,
   first_race.round AS first_round,
-  last_race.round AS last_round
+  last_race.round AS last_round,
+  last_race.round = final_round_driven.round AS is_final_drive_of_season
 
 FROM results
   INNER JOIN races ON races.race_id = results.race_id
@@ -64,5 +65,19 @@ FROM results
     ON last_race.year = races.year
     AND last_race.driver_id = results.driver_id
     AND last_race.drive_id = first_race.drive_id
+
+  INNER JOIN (
+    SELECT
+      year,
+      driver_id,
+      round
+    FROM drives_prelim
+    GROUP BY
+      year,
+      driver_id
+    HAVING round = MAX(round)
+  ) AS final_round_driven
+    ON final_round_driven.year = races.year
+    AND final_round_driven.driver_id = results.driver_id
 
 ;
