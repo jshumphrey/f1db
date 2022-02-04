@@ -12,15 +12,15 @@ SELECT DISTINCT
   drives.is_first_drive_of_season AS is_first_drive,
   drives.is_final_drive_of_season AS is_final_drive,
   COALESCE(constructors.constructor_id, 0) AS constructor_id,
-  constructors.short_name AS constructor_name,
+  COALESCE(constructors.short_name, "Hiatus") AS constructor_name,
   COALESCE(liveries.primary_hex_code, "#000000") AS hex_code,
   COALESCE(team_driver_ranks.team_driver_rank, 0) AS team_driver_rank,
   driver_standings.points,
   driver_standings.position,
   RANK() OVER legend_rank AS legend_rank
 
-FROM drivers
-  INNER JOIN driver_standings ON driver_standings.driver_id = drivers.driver_id
+FROM drivers_ext AS drivers
+  INNER JOIN driver_standings_ext AS driver_standings ON driver_standings.driver_id = drivers.driver_id
   INNER JOIN races_ext AS races ON races.race_id = driver_standings.race_id
   LEFT JOIN short_grand_prix_names ON short_grand_prix_names.full_name = races.name
 
@@ -42,7 +42,7 @@ FROM drivers
     AND team_driver_ranks.constructor_id = constructors.constructor_id
     AND team_driver_ranks.driver_id = drivers.driver_id
 
-WHERE races.year = 2017
+WHERE races.year = 2005
 
 WINDOW
   legend_rank AS (
