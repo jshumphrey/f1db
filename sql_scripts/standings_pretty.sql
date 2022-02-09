@@ -3,6 +3,7 @@ CREATE TEMP TABLE driver_standings_pretty AS
 SELECT DISTINCT
   races.year,
   races.round,
+  races.race_id,
   races.short_name AS race_name,
   drivers.driver_id,
   drivers.full_name,
@@ -42,7 +43,7 @@ FROM drivers_ext AS drivers
     AND team_driver_ranks.constructor_id = constructors.constructor_id
     AND team_driver_ranks.driver_id = drivers.driver_id
 
-WHERE races.year = 2005
+WHERE races.year = 2017
 
 WINDOW
   legend_rank AS (
