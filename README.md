@@ -27,6 +27,9 @@ This will display a menu of various functions and actions you can take, includin
 - `-r`, `--reload`: Delete the SQLite database file, and regenerate it from the downloaded CSV files.
 - `-d`, `--download`: Download a fresh copy of the CSV files from the Ergast API.
   - You'll want to do this if you're expecting the Ergast data to have changed, such as after the completion of a Grand Prix.
+- `-s`, `--execute_script` `file_name [, file_name...]`: Execute the contents of one or more SQL script files. This can also be done via the menus.
+- `-t`, `--export_table` `table_name [, table_name...]`: Export one or more database tables to a CSV. The name of each CSV will be `[table_name].csv`. This can also be done via the menus.
+- `-x`, `--exit`: Exit the program instead of displaying the menus. This is useful when providing `-s` or `-t` and want to simply execute one or two functions and return to the shell.
 
 #### Logging
 
@@ -55,4 +58,4 @@ The author of the Ergast API provided two documents on the database table struct
 
 ## Special thanks
 
-Many thanks go out to PJ Tierney for his help with some of the hex codes for the various constructor liveries. Check out [his amazing gallery of Pocket Liveries](https://pjtierney.net/pocketliveries), minimalistic versions of lots of iconic F1 liveries, ready to decorate your phone's home screen; also check out [his wide variety of YouTube content](https://www.youtube.com/pjtierney) focused on racing games and graphic design.
+Many thanks go out to PJ Tierney for his help with some of the hex codes for the various constructor liveries. Check out [his amazing gallery of Pocket Liveries](https://pjtierney.net/pocketliveries): minimalistic versions of lots of iconic F1 liveries, ready to decorate your phone's home screen; also check out [his wide variety of YouTube content](https://www.youtube.com/pjtierney) focused on racing games and graphic design.

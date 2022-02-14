@@ -415,6 +415,9 @@ def get_arguments():
     parser.add_argument("-d", "--download", action = "store_true")
     parser.add_argument("-q", "--quiet", action = "store_true")
     parser.add_argument("-v", "--verbose", action = "store_true")
+    parser.add_argument("-s", "--execute_script", action = "store", nargs = "+")
+    parser.add_argument("-t", "--export_table", action = "store", nargs = "+")
+    parser.add_argument("-x", "--exit", action = "store_true")
     return parser.parse_args()
 
 def handle_arguments(arguments):
@@ -427,7 +430,7 @@ def handle_arguments(arguments):
         logger.setLevel(logging.INFO)
 
     if arguments.download:
-        logger.debug("Download option provided, redownloading files")
+        logger.debug("Download option provided; redownloading files")
         redownload_files()
     elif not os.path.exists(config.BASE_CSV_FILES_DIR) or not os.listdir(config.BASE_CSV_FILES_DIR):
         print(f"{config.BASE_CSV_FILES_DIR} missing or empty!")
@@ -438,7 +441,7 @@ def handle_arguments(arguments):
             raise FileNotFoundError(f"./{config.BASE_CSV_FILES_DIR} missing or empty and user declined to redownload from source")
 
     if arguments.reload:
-        logger.debug("Reload argument provided, reloading database")
+        logger.debug("Reload argument provided; reloading database")
         reload_database()
 
     if arguments.download and not arguments.reload:
@@ -456,6 +459,22 @@ def handle_arguments(arguments):
             reload_database()
         else:
             raise FileNotFoundError(f"/{config.DATABASE_FILE_NAME} not found and user declined to rebuild from source")
+
+    # Certain arguments require a Connection to the DB, and it's advantageous for them to share a connection.
+    # Check if any of them are present and set up a Connection if so.
+    if any([arguments.execute_script, arguments.export_table]):
+        with Connection() as conn:
+            conn.bind_queries(config.QUERY_YAML_FILE_NAME)
+
+            for script_file in arguments.execute_script:
+                conn.execute_sql_script_file(script_file)
+
+            for table_name in arguments.export_table:
+                conn.export_table_to_csv(table_name)
+
+    if arguments.exit:
+        logger.debug("Exit argument provided; exiting.")
+        sys.exit(1)
 
 def get_latest_grand_prix():
     '''This queries the Ergast API's endpoint shortcut for the most recent race
@@ -638,7 +657,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# Todo: Fucking gigantic todo: Rewrite the entire Menu class using `curses`
-# Todo: Add a CLI argument that runs a SQL script file, prints its output, and exits back to the shell.
-# Todo: Remember to send a modmail to make sure this doesn't get you banned for self-promotion
