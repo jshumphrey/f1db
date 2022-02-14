@@ -24,17 +24,21 @@ This will display a menu of various functions and actions you can take, includin
 
 #### Functional
 
-- `-r`, `--reload`: Delete the SQLite database file, and regenerate it from the downloaded CSV files.
-- `-d`, `--download`: Download a fresh copy of the CSV files from the Ergast API.
+- `-r | --reload`: Delete the SQLite database file, and regenerate it from the downloaded CSV files.
+- `-d | --download`: Download a fresh copy of the CSV files from the Ergast API.
   - You'll want to do this if you're expecting the Ergast data to have changed, such as after the completion of a Grand Prix.
-- `-s`, `--execute_script` `file_name [, file_name...]`: Execute the contents of one or more SQL script files. This can also be done via the menus.
-- `-t`, `--export_table` `table_name [, table_name...]`: Export one or more database tables to a CSV. The name of each CSV will be `[table_name].csv`. This can also be done via the menus.
-- `-x`, `--exit`: Exit the program instead of displaying the menus. This is useful when providing `-s` or `-t` and want to simply execute one or two functions and return to the shell.
+- `-s | --execute_script file_name [, file_name...]`: Execute the contents of one or more SQL script files.
+  - This can also be done via the menus.
+- `-t | --export_table table_name [, table_name...]`: Export one or more database tables to a CSV.
+  - The name of each CSV will be `[table_name].csv`.
+  - This can also be done via the menus.
+- `-x | --exit`: Exit the program instead of displaying the menus.
+  - This is useful when providing `-s` or `-t` and want to simply execute one or two functions and return to the shell.
 
 #### Logging
 
-- `-q`, `--quiet`: Suppress all logging/informational output, except for error messages.
-- `-v`, `--verbose`: Display additional debug output.
+- `-q | --quiet`: Suppress all logging/informational output, except for error messages.
+- `-v | --verbose`: Display additional debug output.
 
 ## Maintaining the program
 
