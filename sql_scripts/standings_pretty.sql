@@ -43,7 +43,7 @@ FROM drivers_ext AS drivers
     AND team_driver_ranks.constructor_id = constructors.constructor_id
     AND team_driver_ranks.driver_id = drivers.driver_id
 
-WHERE races.year = 2017
+WHERE races.year = $year
 
 WINDOW
   legend_rank AS (

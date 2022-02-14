@@ -73,10 +73,21 @@ class Connection:
             self.queries += [Query(self, query_yaml) for query_yaml in yaml.load_all(queries_yaml, Loader = yaml.SafeLoader)]
             logger.debug("Queries bound successfully.")
 
-    def execute_sql_script_file(self, file_name):
+    def execute_sql_script_file(self, file_name, **kwargs):
         '''This opens and executes a SQL script file via the database connection.'''
-        with open(os.path.join(config.SQL_SCRIPT_FILES_DIR, file_name), "r") as sql_script:
-            self.connection.executescript(sql_script.read())
+        with open(os.path.join(config.SQL_SCRIPT_FILES_DIR, file_name), "r") as script_file:
+            script_text = script_file.read()
+
+        parameters = set(re.findall(r"(\$[a-zA-Z0-9]+)", script_text))
+        for parameter in parameters:
+            if parameter.replace("$", "") not in kwargs:
+                value = input(f"Please provide a value for '{parameter}' in {file_name}: ")
+            else:
+                value = str(kwargs[parameter.replace("$", "")])
+
+            script_text = script_text.replace(parameter, value)
+
+        self.connection.executescript(script_text)
 
     def print_select_results(self, select_statement):
         '''This executes the provided SELECT statement and dumps out its output to the console.'''
