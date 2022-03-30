@@ -8,7 +8,7 @@ See http://ergast.com/mrd/ for more details about the API and the table structur
 # See https://stackoverflow.com/questions/301134/how-to-import-a-module-given-its-name-as-string
 
 # Standard-library imports
-import argparse, csv, logging, os, pdb, platform, re, sqlite3, sys, textwrap, zipfile
+import argparse, csv, logging, os, platform, re, sqlite3, sys, textwrap, zipfile
 
 # Third-party imports
 import pandas, requests, yaml
@@ -253,7 +253,7 @@ class Menu:
         if self.parent_menu:
             default_items += [MenuItem(self, "Return to the previous menu.", lambda *args: None, exit_action = "BREAK")] # The lambda here acts as a no-op.
         default_items += [
-            MenuItem(self, "Drop to the PDB debug console.", pdb.set_trace),
+            MenuItem(self, "Drop to the PDB debug console.", breakpoint),
             MenuItem(self, "Exit the program.", sys.exit, function_args = [0])
         ]
 

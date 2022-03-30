@@ -3,50 +3,15 @@
 
 import f1db, pandas, plotly.graph_objects as go
 import logging
-import pdb # pylint: disable = unused-import
 
 f1db.logger.setLevel(logging.INFO)
 
-with f1db.Connection() as conn:
+def export_standings_figure(conn): # pylint: disable = missing-function-docstring
     conn.execute_sql_script_file("standings_pretty.sql")
     df = pandas.read_sql_query("SELECT * FROM driver_standings_pretty", conn.connection)
 
-    # Points
-    #points_fig = go.Figure()
-    #points_fig.update_layout (
-    #    width = 1920,
-    #    height = 1080
-    #)
-    #points_fig.update_xaxes(
-    #    tickangle = -45
-    #)
-
-    #for driver in df["code"].unique().tolist():
-    #    driver_df = df.query(f"code == '{driver}'")
-    #    line_dict = {"color": driver_df["hex_code"].tolist()[0]}
-    #    team_driver_rank = driver_df["team_driver_rank"].tolist()[0]
-    #    if team_driver_rank > 1:
-    #        line_dict["dash"] = "dash" if team_driver_rank == 2 else "dot"
-
-    #    points_fig.add_trace(go.Scatter(
-    #        name = driver,
-    #        x = driver_df["race_name"],
-    #        y = driver_df["points"],
-    #        mode = "lines+markers",
-    #        connectgaps = False,
-    #        line = line_dict
-    #    ))
-
-    #points_fig.update_xaxes(
-    #    categoryorder = 'array',
-    #    categoryarray = df[["round", "race_name"]].drop_duplicates().sort_values("round")["race_name"].tolist()
-    #)
-
-    #points_fig.write_image("points.png", engine = "kaleido")
-
-    # Position
     position_fig = go.Figure()
-    position_fig.update_layout (
+    position_fig.update_layout(
         width = 1920,
         height = 1080,
         paper_bgcolor = "#FFFFFF",
@@ -72,7 +37,7 @@ with f1db.Connection() as conn:
 
     drives_df = df[["driver_id", "drive_id"]].drop_duplicates()
 
-    #pdb.set_trace()
+    #breakpoint()
 
     annotations = []
 
@@ -121,4 +86,8 @@ with f1db.Connection() as conn:
 
     position_fig.update_layout(annotations = annotations)
 
-    position_fig.write_image("position.png", engine = "kaleido")
+    position_fig.write_image(f"standings_{drive_constants['year']!s}.png", engine = "kaleido")
+
+with f1db.Connection() as connnection:
+    export_standings_figure(connnection)
+    #export_points_figure(connnection)
