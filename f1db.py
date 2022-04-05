@@ -18,7 +18,7 @@ import f1db_config as config # This file provides a lot of config parameters and
 import f1db_udfs # This file defines all user-defined functions to compile at connection setup
 
 # Configure the logger so that we have a logger object to use.
-logging.basicConfig(level = logging.NOTSET)
+logging.basicConfig(level = logging.INFO)
 logger = logging.getLogger("f1db")
 
 # Set up a global TextWrapper (seriously, do you really want to pass this around to everyone?)
@@ -422,12 +422,11 @@ def get_arguments():
 
 def handle_arguments(arguments):
     '''This executes some one-off functionality based on specific argument values.'''
+    # The logging level gets instantiated to INFO, but it can be overridden by CLI arguments.
     if arguments.verbose:
         logger.setLevel(logging.DEBUG)
     elif arguments.quiet:
         logger.setLevel(logging.WARNING)
-    else:
-        logger.setLevel(logging.INFO)
 
     if arguments.download:
         logger.debug("Download option provided; redownloading files")
@@ -519,7 +518,8 @@ def reload_database():
     then populate_base_tables() to populate them. Finally, RELOAD_SCRIPT_FILES is run,
     which defines and calculates a number of supplemental tables.
 
-    In practice, this function gets called when the --reload argument is provided on the command line.
+    In practice, this function gets called when the --reload argument is provided
+    on the command line, or when the relevant menu option is selected.
 
     Yes, we could theoretically return the connection instead of spinning up a new one,
     but connections are cheap, and this helps keep the functions to a single responsibility.'''
