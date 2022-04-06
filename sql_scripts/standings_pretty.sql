@@ -56,5 +56,6 @@ WINDOW
 
 ORDER BY
   races.round,
-  drivers.surname
+  drivers.surname,
+  drivers.full_name
 ;

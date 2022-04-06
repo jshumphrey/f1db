@@ -10,6 +10,9 @@ f1db.logger.setLevel(logging.INFO)
 DESIRED_NUM_TICKS = 10 # This represents the number of y-axis ticks you'd ideally like to have.
 DTICK_ROUND_TARGET = 5 # This represents the the "round to the nearest X" target for the y-axis tick increment.
 
+X_AXIS_OFFSET_MULTIPLIER = 0.022
+ANNOTATION_OFFSET_MULTIPLIER = 0.007
+
 DEFAULT_LAYOUT = go.Layout(
     width = 1920,
     height = 1080,
@@ -43,6 +46,16 @@ DRIVER_RANK_LINE_TYPES = {
     5: "dot"
 }
 
+def calculate_x_range(min_x_value, max_x_value): # pylint: disable = missing-function-docstring
+    base_offset = max_x_value * X_AXIS_OFFSET_MULTIPLIER
+    return [
+        min_x_value + (base_offset * -1.5),
+        max_x_value + base_offset
+    ]
+
+def calculate_annotation_offset(max_x_value): # pylint: disable = missing-function-docstring
+    return max_x_value * ANNOTATION_OFFSET_MULTIPLIER
+
 def calculate_dtick(max_value):
     '''This calculates the "dtick" (the value between each tick) for a chart's y-axis.
     Essentially, this divides the max value on the y-axis by the desired number of
@@ -59,7 +72,7 @@ def export_driver_standings_figure(conn, **sql_kwargs): # pylint: disable = miss
         xaxis = {
             "categoryorder": "array",
             "categoryarray": df[["round", "race_name"]].drop_duplicates().sort_values("round")["race_name"].tolist(),
-            "range": [-0.75, df["round"].nunique() - 0.5]
+            "range": calculate_x_range(0, df["round"].nunique() - 1)
         },
         yaxis = {
             "title_text": "WDC Standings Position",
@@ -94,16 +107,17 @@ def export_driver_standings_figure(conn, **sql_kwargs): # pylint: disable = miss
         ))
 
         annotation_base = {"text": drive_constants["code"], "showarrow": False, "font": {"size": 14}}
+        annotation_offset = calculate_annotation_offset(df["round"].nunique() - 1)
         if drive_constants["is_first_drive"]:
             annotations.append(annotation_base | {
                 "xanchor": "right",
-                "x": (drive_df.iloc[0]["round"] - 1) - 0.2,
+                "x": (drive_df.iloc[0]["round"] - 1) - annotation_offset,
                 "y": drive_df.iloc[0]["position"]
             })
         if drive_constants["is_final_drive"]:
             annotations.append(annotation_base | {
                 "xanchor": "left",
-                "x": (drive_df.iloc[-1]["round"] - 1) + 0.2,
+                "x": (drive_df.iloc[-1]["round"] - 1) + annotation_offset,
                 "y": drive_df.iloc[-1]["position"]
             })
 
@@ -115,15 +129,13 @@ def export_driver_points_figure(conn, **sql_kwargs): # pylint: disable = missing
     conn.execute_sql_script_file("standings_pretty.sql", **sql_kwargs)
     df = pandas.read_sql_query("SELECT * FROM driver_standings_pretty", conn.connection)
 
-    num_races = df["round"].nunique()
-
     figure = go.Figure(layout = DEFAULT_LAYOUT)
     figure.update_layout(
         title = {"text": f"{df['year'].tolist()[0]} World Drivers' Championship Points by Grand Prix"},
         xaxis = {
             "categoryorder": "array",
             "categoryarray": df[["round", "race_name"]].drop_duplicates().sort_values("round")["race_name"].tolist(),
-            "range": [-0.75, num_races - 0.5]
+            "range": calculate_x_range(0, df["round"].nunique() - 1)
         },
         yaxis = {
             "title_text": "WDC Points",
@@ -158,16 +170,17 @@ def export_driver_points_figure(conn, **sql_kwargs): # pylint: disable = missing
         ))
 
         annotation_base = {"text": drive_constants["code"], "showarrow": False, "font": {"size": 14}}
+        annotation_offset = calculate_annotation_offset(df["round"].nunique() - 1)
         if drive_constants["is_first_drive"]:
             annotations.append(annotation_base | {
                 "xanchor": "right",
-                "x": (drive_df.iloc[0]["round"] - 1) - 0.2,
+                "x": (drive_df.iloc[0]["round"] - 1) - annotation_offset,
                 "y": drive_df.iloc[0]["points"]
             })
         if drive_constants["is_final_drive"]:
             annotations.append(annotation_base | {
                 "xanchor": "left",
-                "x": (drive_df.iloc[-1]["round"] - 1) + 0.2,
+                "x": (drive_df.iloc[-1]["round"] - 1) + annotation_offset,
                 "y": drive_df.iloc[-1]["points"]
             })
 
@@ -175,8 +188,68 @@ def export_driver_points_figure(conn, **sql_kwargs): # pylint: disable = missing
 
     figure.write_image(f"driver_points_{drive_constants['year']!s}.png", engine = "kaleido")
 
+def export_lap_positions_figure(conn, **sql_kwargs): # pylint: disable = missing-function-docstring
+    conn.execute_sql_script_file("lap_position_chart.sql", **sql_kwargs)
+    df = pandas.read_sql_query("SELECT * FROM lap_position_chart", conn.connection)
+
+    figure = go.Figure(layout = DEFAULT_LAYOUT)
+    figure.update_layout(
+        title = {"text": f"{df['year'].tolist()[0]} {df['race_name'].tolist()[0]}"},
+        xaxis = {
+            "range": calculate_x_range(0, df["lap"].max()),
+            "dtick": calculate_dtick(df["lap"].max()),
+            "tickangle": 0
+        },
+        yaxis = {
+            "title_text": "Position",
+            "range": [df["driver_id"].nunique() + 0.5, 0.5],
+            "tick0": 1,
+            "dtick": 1
+        }
+    )
+
+    #breakpoint()
+
+    annotations = []
+
+    for driver_id in df["driver_id"].drop_duplicates():
+        driver_df = df.query(f"driver_id == {driver_id!s}")
+        driver_constants = driver_df.iloc[0]
+
+        figure.add_trace(go.Scatter(
+            name = f"{driver_constants['surname']} ({driver_constants['constructor_name']})",
+            x = driver_df["lap"],
+            y = driver_df["position"],
+            mode = "lines+markers",
+            connectgaps = False,
+            legendrank = driver_constants["legend_rank"],
+            line = {
+                "width": 3,
+                "color": driver_constants["hex_code"],
+                "dash": DRIVER_RANK_LINE_TYPES[driver_constants["team_driver_rank"]]
+            }
+        ))
+
+        annotation_base = {"text": driver_constants["code"], "showarrow": False, "font": {"size": 14}}
+        annotation_offset = calculate_annotation_offset(df["lap"].max())
+        annotations.append(annotation_base | {
+            "xanchor": "right",
+            "x": driver_df.iloc[0]["lap"] - annotation_offset,
+            "y": driver_df.iloc[0]["position"]
+        })
+        annotations.append(annotation_base | {
+            "xanchor": "left",
+            "x": driver_df.iloc[-1]["lap"] + annotation_offset,
+            "y": driver_df.iloc[-1]["position"]
+        })
+
+    figure.update_layout(annotations = annotations)
+
+    figure.write_image(f"lap_positions_{driver_constants['year']!s}_{driver_constants['race_short_name'].replace(' ', ' ').lower()!s}.png", engine = "kaleido")
+
 if __name__ == "__main__":
-    with f1db.Connection() as connnection:
+    with f1db.Connection() as connection:
         for year in tqdm([2002, 2007, 2021, 2022]):
-            export_driver_standings_figure(connnection, year = year)
-            export_driver_points_figure(connnection, year = year)
+            export_driver_standings_figure(connection, year = year)
+            export_driver_points_figure(connection, year = year)
+        export_lap_positions_figure(connection, race_id = 847)

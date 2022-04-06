@@ -78,7 +78,7 @@ class Connection:
         with open(os.path.join(config.SQL_SCRIPT_FILES_DIR, file_name), "r") as script_file:
             script_text = script_file.read()
 
-        parameters = set(re.findall(r"(\$[a-zA-Z0-9]+)", script_text))
+        parameters = set(re.findall(r"(\$[a-zA-Z0-9_]+)", script_text))
         for parameter in parameters:
             if parameter.replace("$", "") not in kwargs:
                 value = input(f"Please provide a value for '{parameter}' in {file_name}: ")
