@@ -353,9 +353,9 @@ def export_delta_standings_figure(conn, **sql_kwargs): # pylint: disable = missi
 if __name__ == "__main__":
     with f1db.Connection() as connection:
         export_delta_standings_figure(connection, race_id = 1076)
-        #for year in tqdm([2002, 2007, 2021, 2022]):
-        #    export_driver_standings_figure(connection, year = year)
-        #    export_driver_points_figure(connection, year = year)
-        #for race_id in tqdm([1066, 1076]):
-        #    export_lap_positions_figure(connection, race_id = race_id)
-        #    export_delta_standings_figure(connection, race_id = race_id)
+        for year in tqdm([2002, 2007, 2021, 2022]):
+            export_driver_standings_figure(connection, year = year)
+            export_driver_points_figure(connection, year = year)
+        for race_id in tqdm([1066, 1076]):
+            export_lap_positions_figure(connection, race_id = race_id)
+            export_delta_standings_figure(connection, race_id = race_id)
