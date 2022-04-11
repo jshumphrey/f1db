@@ -62,6 +62,11 @@ def calculate_dtick(max_value):
     y-axis ticks, then rounds it to the desired level of precision.'''
     return DTICK_ROUND_TARGET * round((max_value / DESIRED_NUM_TICKS) / DTICK_ROUND_TARGET)
 
+def create_rgba_from_hex(hex_code, opacity_percent = 1): # pylint: disable = missing-function-docstring
+    sh = hex_code.lstrip("#")
+    rgb_tuple = tuple(int(sh[i:i + 2], base = 16) for i in (0, 2, 4))
+    return f"rgba({rgb_tuple[0]!s},{rgb_tuple[1]!s},{rgb_tuple[2]!s},{opacity_percent!s})"
+
 def export_driver_standings_figure(conn, **sql_kwargs): # pylint: disable = missing-function-docstring
     conn.execute_sql_script_file("standings_pretty.sql", **sql_kwargs)
     df = pandas.read_sql_query("SELECT * FROM driver_standings_pretty", conn.connection)
@@ -185,7 +190,6 @@ def export_driver_points_figure(conn, **sql_kwargs): # pylint: disable = missing
             })
 
     figure.update_layout(annotations = annotations)
-
     figure.write_image(f"driver_points_{drive_constants['year']!s}.png", engine = "kaleido")
 
 def export_lap_positions_figure(conn, **sql_kwargs): # pylint: disable = missing-function-docstring
@@ -230,6 +234,35 @@ def export_lap_positions_figure(conn, **sql_kwargs): # pylint: disable = missing
             }
         ))
 
+        driver_pitstops_df = driver_df.query("marker_type == 'Pitted'")
+        figure.add_trace(go.Scatter(
+            name = f"{driver_constants['full_name']} - Pit Stops",
+            x = driver_pitstops_df["lap"],
+            y = driver_pitstops_df["position"],
+            mode = "markers",
+            showlegend = False,
+            marker = {
+                "size": 15,
+                "color": "#FF0000",
+                "line": {"color": "#000000", "width": 2},
+                "symbol": "octagon"
+            }
+        ))
+
+        driver_retirements_df = driver_df.query("marker_type == 'Retired'")
+        figure.add_trace(go.Scatter(
+            name = f"{driver_constants['full_name']} - Pit Stops",
+            x = driver_retirements_df["lap"],
+            y = driver_retirements_df["position"],
+            mode = "markers",
+            showlegend = False,
+            marker = {
+                "size": 15,
+                "color": driver_constants["hex_code"],
+                "symbol": "x"
+            }
+        ))
+
         annotation_base = {"text": driver_constants["code"], "showarrow": False, "font": {"size": 14}}
         annotation_offset = calculate_annotation_offset(df["lap"].max())
         annotations.append(annotation_base | {
@@ -244,12 +277,85 @@ def export_lap_positions_figure(conn, **sql_kwargs): # pylint: disable = missing
         })
 
     figure.update_layout(annotations = annotations)
-
     figure.write_image(f"lap_positions_{driver_constants['year']!s}_{driver_constants['race_short_name'].replace(' ', ' ').lower()!s}.png", engine = "kaleido")
+
+def export_delta_standings_figure(conn, **sql_kwargs): # pylint: disable = missing-function-docstring
+    conn.execute_sql_script_file("delta_standings_boxplot.sql", **sql_kwargs)
+    df = pandas.read_sql_query("SELECT * FROM delta_standings_boxplot", conn.connection)
+    base_offset = df["current_position"].max() * X_AXIS_OFFSET_MULTIPLIER
+
+    figure = go.Figure(layout = DEFAULT_LAYOUT)
+    figure.update_layout(
+        title = {"text": (
+            f"Potential Standings Changes After the {df['year'].tolist()[0]} {df['race_name'].tolist()[0]}<br>"
+            f"<sup><i>The left and right ends of the 'box' and 'whiskers' are the best/worst positions attainable at the end of the next Grand Prix and the end of this season, respectively."
+            #f"The left and right ends of the 'box' are the best/worst positions attainable after the end of the next Grand Prix.<br>"
+            #f"The vertical line within the box represents this driver's current position. This might overlap with one end of the box."
+            f"</i></sup>"
+        )},
+        xaxis = {
+            "title_text": "Possible Future Positions",
+            "title_font": {"size": 16},
+            "gridwidth": 0.5,
+            "gridcolor": "#BBBBBB",
+            "range": [-2.5, df["current_position"].max() + base_offset],
+            "tickvals": list(range(1, df["current_position"].max() + 1)),
+            "tickangle": 0
+        },
+        yaxis = {
+            "title_text": "Current Position",
+            "range": [df["current_position"].max() + base_offset, 1 - base_offset],
+            "tick0": 1,
+            "dtick": 1,
+            "gridcolor": "#FFFFFF"
+        }
+    )
+
+    annotations = []
+
+    for driver_id in df["driver_id"].drop_duplicates():
+        driver_df = df.query(f"driver_id == {driver_id!s}")
+
+        #breakpoint()
+        driver_constants = driver_df.iloc[0]
+
+        figure.add_trace(go.Box(
+            name = driver_constants["full_name"],
+            y0 = driver_constants["current_position"],
+
+            lowerfence = driver_df["best_position_this_season"],
+            q1 = driver_df["best_position_next_race"],
+            median = driver_df["current_position"],
+            q3 = driver_df["worst_position_next_race"],
+            upperfence = driver_df["worst_position_this_season"],
+            showlegend = False,
+            orientation = "h",
+            line = {
+                "width": 3,
+                "color": driver_constants["hex_code"]
+            },
+            fillcolor = create_rgba_from_hex(driver_constants["hex_code"], 0.25)
+        ))
+
+        annotation_offset = calculate_annotation_offset(df["current_position"].max())
+        annotations.append({
+            "text": f"{driver_constants['full_name']} ({driver_constants['constructor_name']}) - {round(driver_constants['current_points'])} pts",
+            "xanchor": "right",
+            "x": 1 - annotation_offset,
+            "y": driver_df.iloc[0]["current_position"],
+            "showarrow": False,
+            "font": {"size": 14}
+        })
+
+    figure.update_layout(annotations = annotations)
+    figure.write_image(f"delta_standings_{driver_constants['year']!s}_{driver_constants['race_short_name'].replace(' ', ' ').lower()!s}.png", engine = "kaleido")
 
 if __name__ == "__main__":
     with f1db.Connection() as connection:
-        for year in tqdm([2002, 2007, 2021, 2022]):
-            export_driver_standings_figure(connection, year = year)
-            export_driver_points_figure(connection, year = year)
-        export_lap_positions_figure(connection, race_id = 847)
+        export_delta_standings_figure(connection, race_id = 1076)
+        #for year in tqdm([2002, 2007, 2021, 2022]):
+        #    export_driver_standings_figure(connection, year = year)
+        #    export_driver_points_figure(connection, year = year)
+        #for race_id in tqdm([1066, 1076]):
+        #    export_lap_positions_figure(connection, race_id = race_id)
+        #    export_delta_standings_figure(connection, race_id = race_id)

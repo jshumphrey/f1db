@@ -465,11 +465,13 @@ def handle_arguments(arguments):
         with Connection() as conn:
             conn.bind_queries(config.QUERY_YAML_FILE_NAME)
 
-            for script_file in arguments.execute_script:
-                conn.execute_sql_script_file(script_file)
+            if arguments.execute_script:
+                for script_file in arguments.execute_script:
+                    conn.execute_sql_script_file(script_file)
 
-            for table_name in arguments.export_table:
-                conn.export_table_to_csv(table_name)
+            if arguments.export_table:
+                for table_name in arguments.export_table:
+                    conn.export_table_to_csv(table_name)
 
     if arguments.exit:
         logger.debug("Exit argument provided; exiting.")

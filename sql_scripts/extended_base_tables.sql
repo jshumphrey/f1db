@@ -126,8 +126,36 @@ CREATE TABLE races_ext AS
 SELECT DISTINCT
   races.*,
   pit_stops.race_id IS NOT NULL AS is_pit_data_available,
-  COALESCE(short_grand_prix_names.short_name, races.name) AS short_name
+  COALESCE(short_grand_prix_names.short_name, races.name) AS short_name,
+  CASE
+    WHEN sprint_results.race_id IS NOT NULL THEN 1
+    WHEN races.race_id IN (1077, 1084, 1095) THEN 1
+    ELSE 0
+  END AS has_sprint,
+  CASE
+    WHEN races.year < 1960 THEN 9 /*8-point win plus flap point*/
+    WHEN races.year = 1960 THEN 8 /*8-point win and no flap point*/
+    WHEN races.year < 1991 THEN 9 /*9-point win and no flap point*/
+    WHEN races.year < 2010 THEN 10 /*10-point win and no flap point*/
+    WHEN races.year < 2019 THEN 25 /*25-point win and no flap point*/
+    WHEN races.year < 2021 THEN 26 /*25-point win plus flap point*/
+    WHEN races.year = 2021 THEN CASE
+      WHEN sprint_results.race_id IS NOT NULL
+      THEN 29 /*3-point sprint win plus 25-point win plus flap point*/
+      ELSE 26 /*25-point win plus flap point*/
+    END
+    ELSE CASE /*2022 and beyond*/
+      WHEN
+        sprint_results.race_id IS NOT NULL
+        OR races.race_id IN (1077, 1084, 1095)
+      THEN 34 /*8-point sprint win plus 25-point win plus flap point*/
+      ELSE 26 /*25-point win plus flap point*/
+    END
+  END AS max_points
+
 FROM races
   LEFT JOIN pit_stops ON pit_stops.race_id = races.race_id
   LEFT JOIN short_grand_prix_names ON short_grand_prix_names.full_name = races.name
+  LEFT JOIN sprint_results ON sprint_results.race_id = races.race_id
+
 ;
