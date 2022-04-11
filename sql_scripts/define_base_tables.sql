@@ -146,3 +146,24 @@ CREATE TABLE "status" (
   "status" VARCHAR(255) NOT NULL DEFAULT '',
   PRIMARY KEY ("status_id")
 );
+
+CREATE TABLE "sprint_results" (
+  "result_id" INT(11) NOT NULL,
+  "race_id" INT(11) NOT NULL DEFAULT '0',
+  "driver_id" INT(11) NOT NULL DEFAULT '0',
+  "constructor_id" INT(11) NOT NULL DEFAULT '0',
+  "number" INT(11) DEFAULT NULL,
+  "grid" INT(11) NOT NULL DEFAULT '0',
+  "position" INT(11) DEFAULT NULL,
+  "position_text" VARCHAR(255) NOT NULL DEFAULT '',
+  "position_order" INT(11) NOT NULL DEFAULT '0',
+  "points" FLOAT NOT NULL DEFAULT '0',
+  "laps" INT(11) NOT NULL DEFAULT '0',
+  "time" VARCHAR(255) DEFAULT NULL,
+  "milliseconds" INT(11) DEFAULT NULL,
+  "fastest_lap" INT(11) DEFAULT NULL,
+  "fastest_lap_time" VARCHAR(255) DEFAULT NULL,
+  "fastest_lap_speed" VARCHAR(255) DEFAULT NULL,
+  "status_id" INT(11) NOT NULL DEFAULT '0',
+  PRIMARY KEY ("result_id")
+);

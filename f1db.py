@@ -8,7 +8,7 @@ See http://ergast.com/mrd/ for more details about the API and the table structur
 # See https://stackoverflow.com/questions/301134/how-to-import-a-module-given-its-name-as-string
 
 # Standard-library imports
-import argparse, csv, logging, os, pdb, platform, re, sqlite3, sys, textwrap, zipfile
+import argparse, csv, logging, os, platform, re, sqlite3, sys, textwrap, zipfile
 
 # Third-party imports
 import pandas, requests, yaml
@@ -18,7 +18,7 @@ import f1db_config as config # This file provides a lot of config parameters and
 import f1db_udfs # This file defines all user-defined functions to compile at connection setup
 
 # Configure the logger so that we have a logger object to use.
-logging.basicConfig(level = logging.NOTSET)
+logging.basicConfig(level = logging.INFO)
 logger = logging.getLogger("f1db")
 
 # Set up a global TextWrapper (seriously, do you really want to pass this around to everyone?)
@@ -78,7 +78,7 @@ class Connection:
         with open(os.path.join(config.SQL_SCRIPT_FILES_DIR, file_name), "r") as script_file:
             script_text = script_file.read()
 
-        parameters = set(re.findall(r"(\$[a-zA-Z0-9]+)", script_text))
+        parameters = set(re.findall(r"(\$[a-zA-Z0-9_]+)", script_text))
         for parameter in parameters:
             if parameter.replace("$", "") not in kwargs:
                 value = input(f"Please provide a value for '{parameter}' in {file_name}: ")
@@ -253,7 +253,7 @@ class Menu:
         if self.parent_menu:
             default_items += [MenuItem(self, "Return to the previous menu.", lambda *args: None, exit_action = "BREAK")] # The lambda here acts as a no-op.
         default_items += [
-            MenuItem(self, "Drop to the PDB debug console.", pdb.set_trace),
+            MenuItem(self, "Drop to the PDB debug console.", breakpoint),
             MenuItem(self, "Exit the program.", sys.exit, function_args = [0])
         ]
 
@@ -422,12 +422,11 @@ def get_arguments():
 
 def handle_arguments(arguments):
     '''This executes some one-off functionality based on specific argument values.'''
+    # The logging level gets instantiated to INFO, but it can be overridden by CLI arguments.
     if arguments.verbose:
         logger.setLevel(logging.DEBUG)
     elif arguments.quiet:
         logger.setLevel(logging.WARNING)
-    else:
-        logger.setLevel(logging.INFO)
 
     if arguments.download:
         logger.debug("Download option provided; redownloading files")
@@ -466,11 +465,13 @@ def handle_arguments(arguments):
         with Connection() as conn:
             conn.bind_queries(config.QUERY_YAML_FILE_NAME)
 
-            for script_file in arguments.execute_script:
-                conn.execute_sql_script_file(script_file)
+            if arguments.execute_script:
+                for script_file in arguments.execute_script:
+                    conn.execute_sql_script_file(script_file)
 
-            for table_name in arguments.export_table:
-                conn.export_table_to_csv(table_name)
+            if arguments.export_table:
+                for table_name in arguments.export_table:
+                    conn.export_table_to_csv(table_name)
 
     if arguments.exit:
         logger.debug("Exit argument provided; exiting.")
@@ -519,7 +520,8 @@ def reload_database():
     then populate_base_tables() to populate them. Finally, RELOAD_SCRIPT_FILES is run,
     which defines and calculates a number of supplemental tables.
 
-    In practice, this function gets called when the --reload argument is provided on the command line.
+    In practice, this function gets called when the --reload argument is provided
+    on the command line, or when the relevant menu option is selected.
 
     Yes, we could theoretically return the connection instead of spinning up a new one,
     but connections are cheap, and this helps keep the functions to a single responsibility.'''

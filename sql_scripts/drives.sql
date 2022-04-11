@@ -1,3 +1,7 @@
+/*This prelim table gives a list each race a driver competed in, the constructor
+they competed with, and whether they competed with that same constructor in the
+previous race and in the next race. We'll use this later to identify "ranges" of
+driver-constructor partnership. Each of these "ranges" is called a "drive".*/
 DROP TABLE IF EXISTS drives_prelim;
 CREATE TEMP TABLE drives_prelim AS
 SELECT DISTINCT
@@ -97,6 +101,9 @@ FROM results
 
 ;
 
+/*A "hiatus drive" is a period during which a driver does not compete in one or
+more races between transferring between constructors. This temp table and the one
+beneath (hiatus_drives) retrieves these fake "drives".*/
 DROP TABLE IF EXISTS hiatus_prelim;
 CREATE TEMP TABLE hiatus_prelim AS
 SELECT DISTINCT
