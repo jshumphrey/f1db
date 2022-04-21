@@ -252,12 +252,12 @@ def export_lap_positions_figure(conn, **sql_kwargs): # pylint: disable = missing
         driver_retirements_df = driver_df.query("marker_type == 'Retired'")
         figure.add_trace(go.Scatter(
             name = f"{driver_constants['full_name']} - Pit Stops",
-            x = driver_retirements_df["lap"],
-            y = driver_retirements_df["position"],
+            x = driver_retirements_df["lap"] - 1,
+            y = driver_retirements_df["previous_lap_position"],
             mode = "markers",
             showlegend = False,
             marker = {
-                "size": 15,
+                "size": 20,
                 "color": driver_constants["hex_code"],
                 "symbol": "x"
             }
@@ -334,7 +334,8 @@ def export_delta_standings_figure(conn, **sql_kwargs): # pylint: disable = missi
                 "width": 3,
                 "color": driver_constants["hex_code"]
             },
-            fillcolor = create_rgba_from_hex(driver_constants["hex_code"], 0.25)
+            fillcolor = create_rgba_from_hex(driver_constants["hex_code"], 0.25),
+            whiskerwidth = 1
         ))
 
         annotation_offset = calculate_annotation_offset(df["current_position"].max())
@@ -353,9 +354,9 @@ def export_delta_standings_figure(conn, **sql_kwargs): # pylint: disable = missi
 if __name__ == "__main__":
     with f1db.Connection() as connection:
         export_delta_standings_figure(connection, race_id = 1076)
-        for year in tqdm([2002, 2007, 2021, 2022]):
-            export_driver_standings_figure(connection, year = year)
-            export_driver_points_figure(connection, year = year)
-        for race_id in tqdm([1066, 1076]):
+        #for year in tqdm([2002, 2007, 2021, 2022]):
+        #    export_driver_standings_figure(connection, year = year)
+        #    export_driver_points_figure(connection, year = year)
+        for race_id in tqdm([847, 1066, 1076]):
             export_lap_positions_figure(connection, race_id = race_id)
-            export_delta_standings_figure(connection, race_id = race_id)
+            #export_delta_standings_figure(connection, race_id = race_id)

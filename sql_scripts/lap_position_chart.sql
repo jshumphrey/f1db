@@ -19,6 +19,7 @@ SELECT DISTINCT
 
   lap_positions.lap,
   lap_positions.position,
+  LAG(lap_positions.position) OVER driver_positions AS previous_lap_position,
   CASE
     WHEN retirements.driver_id IS NOT NULL THEN "Retired"
     WHEN pit_stops.driver_id IS NOT NULL THEN "Pitted"
@@ -60,6 +61,13 @@ WINDOW
     ORDER BY
       liveries.primary_hex_code,
       team_driver_ranks.team_driver_rank
+  ),
+
+  driver_positions AS (
+    PARTITION BY
+      lap_positions.driver_id
+    ORDER BY
+      lap_positions.lap ASC
   )
 
 ORDER BY
