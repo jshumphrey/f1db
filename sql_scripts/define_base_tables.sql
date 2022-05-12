@@ -110,6 +110,16 @@ CREATE TABLE "races" (
   "date" DATE NOT NULL,
   "time" TIME DEFAULT NULL,
   "url" VARCHAR(255) DEFAULT NULL,
+  "fp1_date" VARCHAR(255) DEFAULT NULL,
+  "fp1_time" VARCHAR(255) DEFAULT NULL,
+  "fp2_date" VARCHAR(255) DEFAULT NULL,
+  "fp2_time" VARCHAR(255) DEFAULT NULL,
+  "fp3_date" VARCHAR(255) DEFAULT NULL,
+  "fp3_time" VARCHAR(255) DEFAULT NULL,
+  "quali_date" VARCHAR(255) DEFAULT NULL,
+  "quali_time" VARCHAR(255) DEFAULT NULL,
+  "sprint_date" VARCHAR(255) DEFAULT NULL,
+  "sprint_time" VARCHAR(255) DEFAULT NULL,
   PRIMARY KEY ("race_id")
 );
 

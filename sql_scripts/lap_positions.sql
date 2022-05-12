@@ -24,9 +24,13 @@ SELECT DISTINCT /*Lap 0 - i.e. starting grid*/
   results.race_id,
   results.driver_id,
   0 AS lap,
-  results.grid,
+  CASE
+    WHEN results.grid > 0 THEN results.grid
+    ELSE COUNT(results.driver_id) OVER (PARTITION BY results.race_id)
+  END AS position,
   CASE
     WHEN qualifying.race_id IS NULL THEN 'Starting Position - No Qualification'
+    WHEN results.grid = 0 THEN 'Starting Position - Pit Lane Start'
     WHEN qualifying.position < results.grid THEN 'Starting Position - Grid Drop'
     WHEN qualifying.position > results.grid THEN 'Starting Position - Grid Increase'
     ELSE 'Starting Position - Qualifying'
