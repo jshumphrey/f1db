@@ -277,7 +277,7 @@ def export_lap_positions_figure(conn, **sql_kwargs): # pylint: disable = missing
         })
 
     figure.update_layout(annotations = annotations)
-    figure.write_image(f"lap_positions_{driver_constants['year']!s}_{driver_constants['race_short_name'].replace(' ', ' ').lower()!s}.png", engine = "kaleido")
+    figure.write_image(f"lap_positions_{driver_constants['year']!s}_round{str(driver_constants['round']).zfill(2)}_{driver_constants['race_short_name'].replace(' ', ' ').lower()!s}.png", engine = "kaleido")
 
 def export_delta_standings_figure(conn, **sql_kwargs): # pylint: disable = missing-function-docstring
     conn.execute_sql_script_file("delta_standings_boxplot.sql", **sql_kwargs)
@@ -298,7 +298,7 @@ def export_delta_standings_figure(conn, **sql_kwargs): # pylint: disable = missi
             "title_font": {"size": 16},
             "gridwidth": 0.5,
             "gridcolor": "#BBBBBB",
-            "range": [-2.5, df["current_position"].max() + base_offset],
+            "range": [-3.5, df["current_position"].max() + base_offset],
             "tickvals": list(range(1, df["current_position"].max() + 1)),
             "tickangle": 0
         },
@@ -349,14 +349,17 @@ def export_delta_standings_figure(conn, **sql_kwargs): # pylint: disable = missi
         })
 
     figure.update_layout(annotations = annotations)
-    figure.write_image(f"delta_standings_{driver_constants['year']!s}_{driver_constants['race_short_name'].replace(' ', ' ').lower()!s}.png", engine = "kaleido")
+    figure.write_image(f"delta_standings_{driver_constants['year']!s}_round{str(driver_constants['round']).zfill(2)}_{driver_constants['race_short_name'].replace(' ', ' ').lower()!s}.png", engine = "kaleido")
 
 if __name__ == "__main__":
     with f1db.Connection() as connection:
-        export_delta_standings_figure(connection, race_id = 1076)
-        for year in tqdm([2022]):
+        for year in tqdm([2023]):
             export_driver_standings_figure(connection, year = year)
             export_driver_points_figure(connection, year = year)
-        for race_id in tqdm([1074, 1075, 1076, 1077, 1078]):
-            export_lap_positions_figure(connection, race_id = race_id)
-            export_delta_standings_figure(connection, race_id = race_id)
+
+        for race_id in tqdm(range(1098, 1099)):
+            try:
+                export_lap_positions_figure(connection, race_id = race_id)
+                export_delta_standings_figure(connection, race_id = race_id)
+            except IndexError:
+                pass
